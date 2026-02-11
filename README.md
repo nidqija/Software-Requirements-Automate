@@ -1,3 +1,5 @@
+![alt text](image.png)
+
 # SR Automate 🚀
 
 **Human Prompt → Sequence Diagram**
@@ -28,4 +30,3 @@ SR_Automate/
 ├── .venv/               # Python Virtual Environment
 └── package.json         # Root orchestration
 
-![alt text](image.png)
