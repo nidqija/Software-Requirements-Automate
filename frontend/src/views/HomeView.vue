@@ -1,5 +1,108 @@
 <script setup>
-// You can import assets or components here
+import { nextTick, ref } from 'vue';
+import mermaid from 'mermaid';
+
+
+mermaid.initialize({ 
+  startOnLoad: false, 
+  theme: 'default',
+  securityLevel: 'loose',
+});
+
+const userPrompt = ref("");
+const resultDiagram = ref("");
+const loading = ref(false);
+
+const generateDiagram = async () => {
+  if (!userPrompt.value) return alert("Please enter a prompt");
+  
+  loading.value = true;
+  resultDiagram.value = ""; // Reset
+
+  try {
+    // 1. Direct Fetch to Ollama
+    const response = await fetch('http://localhost:11434/api/chat', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({
+        model: "gemma3:1b",
+        messages: [
+          {
+            role: "system",
+            content: `You are a Mermaid generator. 
+           Rules:
+           1. Start with 'sequenceDiagram'.
+           2. EVERY command must be on a NEW LINE.
+           3. Use 'alt', 'else', and 'end' for logic, but put them on their OWN lines.
+           4. NO backticks. NO explanations.
+
+           Example:
+           sequenceDiagram
+           User->>System: Login
+           alt success
+           System->>User: OK
+           else failure
+           System->>User: Error
+           end`
+          },
+          {
+            role: "user",
+            content: `Generate a sequence diagram for: ${userPrompt.value}`
+          }
+        ],
+        stream: false
+      })
+    });
+
+    if (!response.ok) throw new Error("Connection to Ollama failed.");
+
+    const data = await response.json();
+    let aiReply = data.message.content.trim();
+
+    
+    aiReply = aiReply.replace(/```mermaid/g, "").replace(/```/g, "");
+    
+    const startIndex = aiReply.indexOf("sequenceDiagram");
+    if (startIndex === -1) {
+      throw new Error("AI failed to provide a valid sequenceDiagram start.");
+    }
+
+
+    let cleanCode = aiReply.substring(startIndex).trim();
+    let fixedCode = cleanCode
+  .replace(/Systemelse/g, 'System\nelse')
+  .replace(/endelse/g, 'end\nelse')
+  .replace(/deactivateSystem/g, 'deactivate System')
+  .replace(/activateSystem/g, 'activate System');
+
+  resultDiagram.value = fixedCode;
+
+
+  
+    await nextTick();
+    const element = document.getElementById('mermaid-box');
+    
+    if (element) {
+      element.removeAttribute('data-processed');
+
+      element.innerHTML = fixedCode;
+      
+    
+      await mermaid.run({ nodes: [element] });
+    }
+
+  } catch (error) {
+    console.error('Error:', error);
+    resultDiagram.value = "Error: " + error.message;
+  } finally {
+    loading.value = false;
+  }
+};
+
+
+
+
+
 </script>
 
 <template>
@@ -12,16 +115,21 @@
     <section class="content-grid">
       <div class="card">
         <h2>Prompt</h2>
-        <textarea placeholder="Enter your user story or functional requirement"></textarea>
-        <button>Generate</button>
+        <textarea id="prompt" v-model="userPrompt" placeholder="Enter your user story or functional requirement"></textarea>
+        <button id="generate" @click="generateDiagram">Generate</button>
       </div>
 
       <div class="card">
-        <h2 class="title">Result</h2>
-        <div class="result-box">
-          <p class="subtitle" id="result">Your generated sequence diagram will appear here.</p>
-        </div>
-      </div>
+  <h2 class="title">Result</h2>
+  <div class="result-box">
+    <p v-if="loading" class="subtitle">Generating your diagram...</p>
+    
+    <div id="mermaid-box" class="mermaid">
+      {{ resultDiagram }}
+    </div>
+   
+  </div>
+</div>
     </section>
 
     <section class="tech-stack">

@@ -27,3 +27,5 @@ SR_Automate/
 ├── frontend/            # Vue.js Web App
 ├── .venv/               # Python Virtual Environment
 └── package.json         # Root orchestration
+
+![alt text](image.png)
