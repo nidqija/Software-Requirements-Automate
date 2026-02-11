@@ -19,7 +19,7 @@
       <div class="card">
         <h2 class="title">Result</h2>
         <div class="result-box">
-          <p class="subtitle">Your generated sequence diagram will appear here.</p>
+          <p class="subtitle" id="result">Your generated sequence diagram will appear here.</p>
         </div>
       </div>
     </section>
