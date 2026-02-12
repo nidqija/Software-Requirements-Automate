@@ -1,13 +1,17 @@
 <script setup>
 import { nextTick, ref } from 'vue';
 import mermaid from 'mermaid';
+import { SequenceDiagramFactory } from '@/factory/diagramFactory';
 
-
+// initialize mermaid theme and security level
 mermaid.initialize({ 
   startOnLoad: false, 
   theme: 'default',
   securityLevel: 'loose',
 });
+
+// define expert from sequence diagram factory variable  
+const expert = SequenceDiagramFactory.sequence;
 
 const userPrompt = ref("");
 const resultDiagram = ref("");
@@ -28,22 +32,9 @@ const generateDiagram = async () => {
         model: "gemma3:1b",
         messages: [
           {
-            role: "system",
-            content: `You are a Mermaid generator. 
-           Rules:
-           1. Start with 'sequenceDiagram'.
-           2. EVERY command must be on a NEW LINE.
-           3. Use 'alt', 'else', and 'end' for logic, but put them on their OWN lines.
-           4. NO backticks. NO explanations.
-
-           Example:
-           sequenceDiagram
-           User->>System: Login
-           alt success
-           System->>User: OK
-           else failure
-           System->>User: Error
-           end`
+            role: expert.role,
+            content: expert.systemPrompt,
+            Rules: expert.fixer,
           },
           {
             role: "user",
