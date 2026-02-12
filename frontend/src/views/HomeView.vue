@@ -17,6 +17,11 @@ const userPrompt = ref("");
 const resultDiagram = ref("");
 const loading = ref(false);
 
+
+
+// ============================================== generate sequence diagram ======================================================== //
+
+
 const generateDiagram = async () => {
   if (!userPrompt.value) return alert("Please enter a prompt");
   
@@ -80,7 +85,7 @@ const generateDiagram = async () => {
   }
 };
 
-
+// ============================================== copy to clipboard ======================================================== //
 
 const copyToClipboard = async () => {
    if (!resultDiagram.value) return;
@@ -98,38 +103,62 @@ const copyToClipboard = async () => {
    }
 }
 
+// ============================================== copy image to clipboard ======================================================== //
+
 const copyImageToClipboard = async () => {
-   if (!resultDiagram.value) return;
+  if (!resultDiagram.value) return;
 
-   const sygElement = document.querySelector("#mermaid-box svg");
-  
+  const svgElement = document.querySelector("#mermaid-box svg");
+  if (!svgElement) return;
 
-   if (!sygElement) return;
+  try {
+    const scaleFactor = 3;
+    const padding = 80;
 
-   try {
+    // 1. Get bounding box of the actual diagram content
+    const bBox = svgElement.getBBox();
+
+    const contentWidth = bBox.width + padding;
+    const contentHeight = bBox.height + padding;
+
+    // 2. Clone SVG and set explicit viewBox + dimensions so the
+    //    Image element renders at the exact size we expect
+    const svgClone = svgElement.cloneNode(true);
+    svgClone.setAttribute("viewBox", `${bBox.x - padding / 2} ${bBox.y - padding / 2} ${contentWidth} ${contentHeight}`);
+    svgClone.setAttribute("width", contentWidth);
+    svgClone.setAttribute("height", contentHeight);
+
+    // 3. Serialize the corrected SVG
+    const svgData = new XMLSerializer().serializeToString(svgClone);
+    const svgBlob = new Blob([svgData], { type: "image/svg+xml;charset=utf-8" });
+    const url = URL.createObjectURL(svgBlob);
+
+    // 4. Draw onto a high-res canvas
     const canvas = document.createElement("canvas");
     const ctx = canvas.getContext("2d");
-    
-    const svgData = new XMLSerializer().serializeToString(sygElement);
+    canvas.width = contentWidth * scaleFactor;
+    canvas.height = contentHeight * scaleFactor;
+    ctx.scale(scaleFactor, scaleFactor);
+
     const img = new Image();
-    img.src = "data:image/svg+xml;base64," + btoa(unescape(encodeURIComponent(svgData)));
-    
     img.onload = () => {
-      canvas.width = img.width;
-      canvas.height = img.height;
-      ctx.drawImage(img, 0, 0);
+      ctx.fillStyle = "white";
+      ctx.fillRect(0, 0, contentWidth, contentHeight);
+      ctx.drawImage(img, 0, 0, contentWidth, contentHeight);
+
       canvas.toBlob((blob) => {
         navigator.clipboard.write([new ClipboardItem({ "image/png": blob })]);
-        alert("Diagram copied to clipboard");
-      });
+        alert("Full HD Diagram copied!");
+        URL.revokeObjectURL(url);
+      }, "image/png", 1.0);
     };
-   } catch (error) {
-    console.error('Error:', error);
-    alert("Failed to copy diagram to clipboard");
-   }
+    img.src = url;
+
+  } catch (error) {
+    console.error('Copy Error:', error);
+    alert("Error copying image");
+  }
 }
-
-
 
 
 </script>
@@ -252,6 +281,7 @@ const copyImageToClipboard = async () => {
 
 .action-bar{
   margin-bottom: 1rem;
+  
 }
 
 .result-section {
@@ -270,19 +300,22 @@ const copyImageToClipboard = async () => {
   background: #ffffff;
   border: 2px solid #e2e8f0;
   border-radius: 10px;
+  display:block;
+  position: relative;
 }
 
 .result-box .mermaid {
   display: flex;
   justify-content: center;
-  align-items: flex-start;
-  min-height: 400px;
+  align-items: center;
+  width: 100%;
+  min-height: 100%;
 }
 
 .result-box .mermaid svg {
-  max-width: 100%;
-  height: auto;
- 
+  width: 100% !important;
+  height: 100% !important;
+  min-height: 460px;
 }
 
 textarea {
