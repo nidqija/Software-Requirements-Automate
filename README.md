@@ -13,9 +13,10 @@ SR Automate is an AI-driven tool designed to bridge the gap between abstract sof
 | Component | Technology |
 | :--- | :--- |
 | **Frontend** | Vue 3 (Vite), Tailwind CSS |
-| **Backend** | FastAPI (Python) |
-| **Automation** | Concurrently, Pathlib |
+| **Database** | Postgres |
+| **LLM** | [Ollama / Gemma3] |
 | **Diagrams** | [Mermaid.js / PlantUML] |
+
 
 ---
 
