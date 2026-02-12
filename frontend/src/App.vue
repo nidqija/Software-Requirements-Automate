@@ -1,30 +1,36 @@
 <script setup>
+import { ref } from 'vue'
 import { RouterLink, RouterView } from 'vue-router'
+import SideBarView from '@/components/SideBarView.vue'
+
+const sidebarRef = ref(null)
 </script>
 
 <template>
-  <nav>
-    <RouterLink to="/">Home</RouterLink>
-    <span> | </span>
-    <RouterLink to="/about">About</RouterLink>
-  </nav>
-
-  <RouterView />
+  <div class="layout">
+    <SideBarView ref="sidebarRef" />
+    <main
+      class="content"
+      :class="{ 'content-expanded': sidebarRef && !sidebarRef.isOpen }"
+    >
+      <RouterView />
+    </main>
+  </div>
 </template>
 
 <style scoped>
-nav {
-  padding: 1rem;
-  text-align: center;
+.layout {
+  display: flex;
+  min-height: 100vh;
 }
 
-nav a {
-  color: var(--color-text, #333);
-  text-decoration: none;
-  font-weight: 500;
+.content {
+  margin-left: 220px;
+  width: 100%;
+  transition: margin-left 0.3s cubic-bezier(0.4, 0, 0.2, 1);
 }
 
-nav a.router-link-exact-active {
-  color: hsla(160, 100%, 37%, 1);
+.content-expanded {
+  margin-left: 0;
 }
 </style>

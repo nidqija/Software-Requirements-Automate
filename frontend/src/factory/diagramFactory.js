@@ -1,13 +1,37 @@
 
 const baseCleaner = (code) => {
-  return code
-    .replace(/```mermaid/g, "")
-    .replace(/```/g, "")
-    // Remove numbered lists (like 1. 2. 3.) that break Mermaid
-    .split('\n')
-    .filter(line => !/^\d+\./.test(line.trim())) 
-    .join('\n')
-    .trim();
+   let clean = code 
+   .replace(/```mermaid/g, "")
+   .replace(/```/g, "")
+   .trim();
+
+   let lines = clean.split('\n');
+   let result = [];
+
+   for (let line of lines) {
+     let trimmed = line.trim();
+     if (!trimmed ) continue
+
+     if (/^\d+\./.test(trimmed)) continue;
+
+
+     if (
+      trimmed.includes("->") || 
+      trimmed.startsWith("participant") || 
+      trimmed.startsWith("note") ||
+      trimmed.startsWith("alt") || 
+      trimmed.startsWith("else") || 
+      trimmed.startsWith("end") ||
+      trimmed.startsWith("sequenceDiagram") ||
+      trimmed.startsWith("classDiagram") ||
+      trimmed.includes(":") || 
+      trimmed.includes("end")
+     ) {
+        result.push(line);
+     }
+   }
+
+   return result.join('\n');
 };
 
 

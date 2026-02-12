@@ -53,30 +53,20 @@ const generateDiagram = async () => {
     
     aiReply = aiReply.replace(/```mermaid/g, "").replace(/```/g, "");
     
-    const startIndex = aiReply.indexOf("sequenceDiagram");
-    if (startIndex === -1) {
-      throw new Error("AI failed to provide a valid sequenceDiagram start.");
-    }
+    const startIdx = aiReply.indexOf(expert.header);
+    if (startIdx === -1) throw new Error("Invalid diagram format.");
 
 
-    let cleanCode = aiReply.substring(startIndex).trim();
-    let fixedCode = cleanCode
-  .replace(/Systemelse/g, 'System\nelse')
-  .replace(/endelse/g, 'end\nelse')
-  .replace(/deactivateSystem/g, 'deactivate System')
-  .replace(/activateSystem/g, 'activate System');
+    const finalCleanCode = expert.fixer(aiReply.substring(startIdx));
+    resultDiagram.value = finalCleanCode;
 
-  resultDiagram.value = fixedCode;
-
-
-  
     await nextTick();
     const element = document.getElementById('mermaid-box');
     
     if (element) {
       element.removeAttribute('data-processed');
 
-      element.innerHTML = fixedCode;
+      element.innerHTML = finalCleanCode;
       
     
       await mermaid.run({ nodes: [element] });
@@ -90,6 +80,54 @@ const generateDiagram = async () => {
   }
 };
 
+
+
+const copyToClipboard = async () => {
+   if (!resultDiagram.value) return;
+
+   try {
+
+    await navigator.clipboard.writeText(resultDiagram.value);
+    alert("Diagram copied to clipboard");
+
+   } catch (error) {
+
+    console.error('Error:', error);
+    alert("Failed to copy diagram to clipboard");
+
+   }
+}
+
+const copyImageToClipboard = async () => {
+   if (!resultDiagram.value) return;
+
+   const sygElement = document.querySelector("#mermaid-box svg");
+  
+
+   if (!sygElement) return;
+
+   try {
+    const canvas = document.createElement("canvas");
+    const ctx = canvas.getContext("2d");
+    
+    const svgData = new XMLSerializer().serializeToString(sygElement);
+    const img = new Image();
+    img.src = "data:image/svg+xml;base64," + btoa(unescape(encodeURIComponent(svgData)));
+    
+    img.onload = () => {
+      canvas.width = img.width;
+      canvas.height = img.height;
+      ctx.drawImage(img, 0, 0);
+      canvas.toBlob((blob) => {
+        navigator.clipboard.write([new ClipboardItem({ "image/png": blob })]);
+        alert("Diagram copied to clipboard");
+      });
+    };
+   } catch (error) {
+    console.error('Error:', error);
+    alert("Failed to copy diagram to clipboard");
+   }
+}
 
 
 
@@ -109,18 +147,30 @@ const generateDiagram = async () => {
         <textarea id="prompt" v-model="userPrompt" placeholder="Enter your user story or functional requirement"></textarea>
         <button id="generate" @click="generateDiagram">Generate</button>
       </div>
+    </section>
 
-      <div class="card">
-  <h2 class="title">Result</h2>
-  <div class="result-box">
-    <p v-if="loading" class="subtitle">Generating your diagram...</p>
-    
-    <div id="mermaid-box" class="mermaid">
-      {{ resultDiagram }}
-    </div>
-   
-  </div>
-</div>
+    <section class="result-section">
+      <div class="card result-card">
+        <h2 class="title">Result</h2>
+
+        <div v-if="resultDiagram && !loading" class="action-bar">
+          <button class="btn-copy" @click="copyToClipboard">
+            Copy to Clipboard
+          </button>
+           <button class="btn-copy" @click="copyImageToClipboard">
+            Copy Image to Clipboard
+          </button> 
+          
+        </div>
+
+        <div class="result-box">
+          <p v-if="loading" class="subtitle">Generating your diagram...</p>
+          
+          <div id="mermaid-box" class="mermaid">
+            {{ resultDiagram }}
+          </div>
+        </div>
+      </div>
     </section>
 
     <section class="tech-stack">
@@ -144,8 +194,10 @@ const generateDiagram = async () => {
 }
 
 
+
+
 .home {
-  max-width: 900px;
+  max-width: 1200px;
   margin: 0 auto;
   padding: 4rem 2rem;
   font-family: 'Inter', sans-serif;
@@ -165,6 +217,11 @@ const generateDiagram = async () => {
   -webkit-background-clip: text;
   -webkit-text-fill-color: transparent;
   margin-bottom: 1rem;
+}
+
+.btn-copy{
+  font-size: 10px;
+  padding: 10px;
 }
 
 .subtitle {
@@ -190,6 +247,42 @@ const generateDiagram = async () => {
 .card h2 {
   color: #42b883;
   margin-bottom: 1rem;
+}
+
+
+.action-bar{
+  margin-bottom: 1rem;
+}
+
+.result-section {
+  margin-bottom: 4rem;
+}
+
+.result-card {
+  width: 100%;
+}
+
+.result-box {
+  min-height: 500px;
+  max-height: 80vh;
+  overflow: auto;
+  padding: 1.5rem;
+  background: #ffffff;
+  border: 2px solid #e2e8f0;
+  border-radius: 10px;
+}
+
+.result-box .mermaid {
+  display: flex;
+  justify-content: center;
+  align-items: flex-start;
+  min-height: 400px;
+}
+
+.result-box .mermaid svg {
+  max-width: 100%;
+  height: auto;
+ 
 }
 
 textarea {
