@@ -5,19 +5,20 @@ const isOpen = ref(true);
 
 const navItems = ref([
   {
-    name: "Home",
+    name: "Sequence Diagram",
     path: "/",
     type: 'sequence'
   },
-  {
-    name: "About",
-    path: "/about",
-    type: "about"
-  },
+  
   {
     name: "Class Diagram",
     path: "/class-diagram",
     type: "class"
+  } , 
+  {
+    name: "About",
+    path: "/about",
+    type: "about"
   }
 ]);
 

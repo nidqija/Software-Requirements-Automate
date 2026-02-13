@@ -1,5 +1,5 @@
 <script>
-import { ref } from 'vue';
+import { nextTick, ref } from 'vue';
 import mermaid from 'mermaid';
 import { ClassDiagramFactory } from '@/factory/diagramFactory';
 // insert code and function def here
@@ -20,6 +20,138 @@ const resultDiagram = ref("");
 const loading = ref(false);
 
 
+// function to create diagram 
+
+const generateDiagram = async() =>{
+   if(!userPrompt.value ) return;
+
+   loading.value = true;
+   resultDiagram.value = "";
+
+   try {
+     const response = await fetch("http://localhost:11434/api/chat" , {
+      method: "POST",
+      headers: {
+        "Content-Type": "application/json",
+      },
+      body: JSON.stringify({
+        model: "llama3.1",
+        messages: [
+          { role: "system", content: expert.systemPrompt },
+          { role: "user", content: 'Create a class diagram for ' +  userPrompt.value },
+        ],
+      }),
+     })
+
+     if (!response.ok ) {
+        throw new Error("Failed to generate diagram");
+     }
+
+     const data = await response.json();
+
+     let aiReply = data.message.content.trim();
+
+     aiReply = aiReply.replace(/```mermaid/g, "").replace(/```/g, "");
+
+     const startIdx = aiReply.indexOf(expert.header);
+     if (startIdx === -1) throw new Error("Invalid diagram format.");
+
+     const finalCleanCode = expert.fixer(aiReply.substring(startIdx));
+     resultDiagram.value = finalCleanCode;
+
+     await nextTick();
+
+
+     const element = document.getElementById("mermaid-box");
+
+     if(element){
+       element.removeAttribute("data-processed");
+       element.innerHTML = finalCleanCode;
+      
+       await mermaid.run({
+        nodes: [element],
+       })
+
+     } 
+    
+   } catch (error) {
+    console.error("Error generating diagram:", error);
+    resultDiagram.value = "Error generating diagram. Please try again.";
+   } finally {
+    loading.value = false;
+   }
+}
+ 
+
+
+const copyToClipboard = async() => {
+  try {
+    await navigator.clipboard.writeText(resultDiagram.value);
+    alert("Diagram copied to clipboard!");
+  } catch (error) {
+    console.error("Error copying diagram:", error);
+    alert("Failed to copy diagram. Please try again.");
+  }
+}
+
+const copyImageToClipboard = async() => {
+   if (!resultDiagram.value) return;
+
+  const svgElement = document.querySelector("#mermaid-box svg");
+  if (!svgElement) return;
+
+  try {
+    const scaleFactor = 3;
+    const padding = 80;
+
+    // 1. Get bounding box of the actual diagram content
+    const bBox = svgElement.getBBox();
+
+    const contentWidth = bBox.width + padding;
+    const contentHeight = bBox.height + padding;
+
+    // 2. Clone SVG and set explicit viewBox + dimensions so the
+    //    Image element renders at the exact size we expect
+    const svgClone = svgElement.cloneNode(true);
+    svgClone.setAttribute("viewBox", `${bBox.x - padding / 2} ${bBox.y - padding / 2} ${contentWidth} ${contentHeight}`);
+    svgClone.setAttribute("width", contentWidth);
+    svgClone.setAttribute("height", contentHeight);
+
+    // 3. Serialize the corrected SVG
+    const svgData = new XMLSerializer().serializeToString(svgClone);
+    const svgBlob = new Blob([svgData], { type: "image/svg+xml;charset=utf-8" });
+    const url = URL.createObjectURL(svgBlob);
+
+    // 4. Draw onto a high-res canvas
+    const canvas = document.createElement("canvas");
+    const ctx = canvas.getContext("2d");
+    canvas.width = contentWidth * scaleFactor;
+    canvas.height = contentHeight * scaleFactor;
+    ctx.scale(scaleFactor, scaleFactor);
+
+    const img = new Image();
+    img.onload = () => {
+      ctx.fillStyle = "white";
+      ctx.fillRect(0, 0, contentWidth, contentHeight);
+      ctx.drawImage(img, 0, 0, contentWidth, contentHeight);
+
+      canvas.toBlob((blob) => {
+        navigator.clipboard.write([new ClipboardItem({ "image/png": blob })]);
+        alert("Full HD Diagram copied!");
+        URL.revokeObjectURL(url);
+      }, "image/png", 1.0);
+    };
+    img.src = url;
+
+  } catch (error) {
+    console.error('Copy Error:', error);
+    alert("Error copying image");
+  }
+}
+
+
+
+
 
 
 
@@ -29,8 +161,10 @@ const loading = ref(false);
 <template>
    <!------ insert html code here------> 
     <section class="home">
+      <div class="hero">
       <h1 class="title">SR Automate</h1>
-      <p class="subtitle">Create your class diagram here!</p>
+      <p class="subtitle">Create your class diagram in minutes!</p>
+      </div>
     </section>
 
     <section class="content-grid">
@@ -38,6 +172,40 @@ const loading = ref(false);
         <h2>Prompt</h2>
         <textarea id="prompt" v-model="userPrompt" placeholder="Enter your user story or functional requirement"></textarea>
         <button id="generate" @click="generateDiagram">Generate</button>
+      </div>
+    </section>
+
+    <section class="result-section">
+      <div class="card result-card">
+        <h2 class="title">Result</h2>
+
+        <div v-if="resultDiagram && !loading" class="action-bar">
+          <button class="btn-copy" @click="copyToClipboard">
+            Copy to Clipboard
+          </button>
+           <button class="btn-copy" @click="copyImageToClipboard">
+            Copy Image to Clipboard
+          </button> 
+          
+        </div>
+
+        <div class="result-box">
+          <p v-if="loading" class="subtitle">Generating your diagram...</p>
+          
+          
+          <div id="mermaid-box" class="mermaid">
+          </div>
+        </div>
+      </div>
+    </section>
+
+    <section class="tech-stack">
+      <h3>Powered By</h3>
+      <div class="chips">
+        <span>FastAPI</span>
+        <span>Vue 3</span>
+        <span>Mermaid.js</span>
+        <span>Ollama</span>
       </div>
     </section>
 
@@ -65,23 +233,26 @@ const loading = ref(false);
 
 
 
+
 .home {
   max-width: 1200px;
   margin: 0 auto;
-  padding: 4rem 2rem;
+  padding: 1rem 2rem;
   font-family: 'Inter', sans-serif;
   color: #2c3e50;
   line-height: 1.6;
+  
 }
 
 .hero {
   text-align: center;
-  margin-bottom: 4rem;
+  margin-bottom: 1.5rem;
 }
 
 .hero h1 {
   font-size: 3rem;
   font-weight: 800;
+  margin-top: 1rem;
   background: linear-gradient(45deg, #42b883, #35495e);
   -webkit-background-clip: text;
   -webkit-text-fill-color: transparent;
@@ -102,8 +273,10 @@ const loading = ref(false);
 .content-grid {
   display: grid;
   grid-template-columns: repeat(auto-fit, minmax(300px, 1fr));
-  gap: 2rem;
+  gap: 1rem;
   margin-bottom: 4rem;
+  margin: 110px;
+  
 }
 
 .card {
@@ -125,7 +298,8 @@ const loading = ref(false);
 }
 
 .result-section {
-  margin-bottom: 4rem;
+  margin-bottom: 2rem;
+  margin: 100px;
 }
 
 .result-card {

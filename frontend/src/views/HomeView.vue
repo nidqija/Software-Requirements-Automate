@@ -167,7 +167,7 @@ const copyImageToClipboard = async () => {
   <main class="home">
     <section class="hero">
       <h1 class="title">SR Automate</h1>
-      <p class="subtitle">Human Prompt -> Sequence Diagram. In minutes</p>
+      <p class="subtitle">Create your sequence diagram in minutes!</p>
     </section>
 
     <section class="content-grid">
