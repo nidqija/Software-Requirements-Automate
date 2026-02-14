@@ -140,21 +140,40 @@ const copyImageToClipboard = async () => {
     canvas.height = contentHeight * scaleFactor;
     ctx.scale(scaleFactor, scaleFactor);
 
-    const img = new Image();
-    img.onload = () => {
-      ctx.fillStyle = "white";
-      ctx.fillRect(0, 0, contentWidth, contentHeight);
-      ctx.drawImage(img, 0, 0, contentWidth, contentHeight);
+   // ... inside copyImageToClipboard, after creating the 'img' constant
 
-      canvas.toBlob((blob) => {
-        navigator.clipboard.write([new ClipboardItem({ "image/png": blob })]);
+const img = new Image();
+// 1. Set crossOrigin to Anonymous to prevent tainting
+img.crossOrigin = "anonymous"; 
+
+img.onload = () => {
+  ctx.fillStyle = "white";
+  ctx.fillRect(0, 0, canvas.width, canvas.height);
+  
+  // Use the scaled content dimensions
+  ctx.drawImage(img, 0, 0, contentWidth * scaleFactor, contentHeight * scaleFactor);
+
+  try {
+    canvas.toBlob((blob) => {
+      if (!blob) throw new Error("Blob creation failed");
+      
+      const item = new ClipboardItem({ "image/png": blob });
+      navigator.clipboard.write([item]).then(() => {
         alert("Full HD Diagram copied!");
         URL.revokeObjectURL(url);
-      }, "image/png", 1.0);
-    };
-    img.src = url;
+      });
+    }, "image/png", 1.0);
+  } catch (err) {
+    console.error("Export failed:", err);
+    alert("Canvas tainted. Try using a different browser or downloading as SVG.");
+  }
+};
 
-  } catch (error) {
+// 2. Encode the SVG string properly using encodeURIComponent
+// This is often more reliable than a raw Blob URL for canvas drawing
+const encodedData = encodeURIComponent(svgData);
+img.src = `data:image/svg+xml;charset=utf-8,${encodedData}`;
+} catch (error) {
     console.error('Copy Error:', error);
     alert("Error copying image");
   }

@@ -1,4 +1,4 @@
-<script>
+<script setup>
 import { nextTick, ref } from 'vue';
 import mermaid from 'mermaid';
 import { ClassDiagramFactory } from '@/factory/diagramFactory';
@@ -23,7 +23,7 @@ const loading = ref(false);
 // function to create diagram 
 
 const generateDiagram = async() =>{
-   if(!userPrompt.value ) return;
+   if(!userPrompt.value ) return alert("Please enter a prompt");
 
    loading.value = true;
    resultDiagram.value = "";
@@ -31,15 +31,14 @@ const generateDiagram = async() =>{
    try {
      const response = await fetch("http://localhost:11434/api/chat" , {
       method: "POST",
-      headers: {
-        "Content-Type": "application/json",
-      },
+      headers: {"Content-Type": "application/json",},
       body: JSON.stringify({
-        model: "llama3.1",
+        model: "gemma3:1b",
         messages: [
-          { role: "system", content: expert.systemPrompt },
-          { role: "user", content: 'Create a class diagram for ' +  userPrompt.value },
+          { role: "system", content: expert.systemPrompt , Rules: expert.fixer},
+          { role: "user", content: 'Create a class diagram for ' +  userPrompt.value }
         ],
+         stream: false
       }),
      })
 
@@ -61,37 +60,43 @@ const generateDiagram = async() =>{
 
      await nextTick();
 
-
      const element = document.getElementById("mermaid-box");
-
-     if(element){
+     if (element) {
        element.removeAttribute("data-processed");
        element.innerHTML = finalCleanCode;
-      
+  
        await mermaid.run({
-        nodes: [element],
-       })
+         nodes: [element],
+       });
+}
 
      } 
     
-   } catch (error) {
+    catch (error) {
     console.error("Error generating diagram:", error);
     resultDiagram.value = "Error generating diagram. Please try again.";
-   } finally {
+    } finally {
     loading.value = false;
-   }
-}
+    }
+  }
+
  
 
 
 const copyToClipboard = async() => {
-  try {
+  if (!resultDiagram.value) return;
+
+   try {
+
     await navigator.clipboard.writeText(resultDiagram.value);
-    alert("Diagram copied to clipboard!");
-  } catch (error) {
-    console.error("Error copying diagram:", error);
-    alert("Failed to copy diagram. Please try again.");
-  }
+    alert("Diagram copied to clipboard");
+
+   } catch (error) {
+
+    console.error('Error:', error);
+    alert("Failed to copy diagram to clipboard");
+
+   }
 }
 
 const copyImageToClipboard = async() => {
@@ -194,6 +199,7 @@ const copyImageToClipboard = async() => {
           
           
           <div id="mermaid-box" class="mermaid">
+            {{ resultDiagram }}
           </div>
         </div>
       </div>

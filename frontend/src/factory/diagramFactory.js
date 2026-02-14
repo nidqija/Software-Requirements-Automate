@@ -22,9 +22,14 @@ const baseCleaner = (code) => {
             trimmed.startsWith("alt") ||
             trimmed.startsWith("else") ||
             trimmed.startsWith("end") ||
+            trimmed.startsWith("class ") || trimmed.includes("<|--") || 
+            trimmed.includes("*--") || trimmed.includes("o--") || 
+            trimmed.includes("--") || 
             trimmed.startsWith("sequenceDiagram") ||
             trimmed.startsWith("classDiagram") ||
             trimmed.includes(":") ||
+            trimmed.includes("{") || trimmed.includes("}") || 
+            trimmed.includes(":") || 
             trimmed.includes("end")
         ) {
             result.push(line);
@@ -80,15 +85,25 @@ const ClassDiagramFactory = {
            2. EVERY command must be on a NEW LINE.
            3. Use 'alt', 'else', and 'end' for logic, but put them on their OWN lines.
            4. NO backticks. NO explanations.
+           5. Relationships: <|-- (Inheritance), *-- (Composition), o-- (Aggregation).
+           6. Use visibility markers: + (public), - (private).
+           7. Define classes using 'class ClassName { ... }'.
 
            Example:
            classDiagram
-           User->>System: Login
-           alt success
-           System->>User: OK
-           else failure
-           System->>User: Error
-           end
+           class User {
+             +String name
+             +String email
+             +login()
+           }
+
+           class Order {
+             +String orderId
+             +Date date
+             +calculateTotal()
+           }
+
+           User "1" *-- "many" Order : places
         ` ,
         fixer: (code) => {
             return code
