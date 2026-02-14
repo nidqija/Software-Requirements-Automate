@@ -16,10 +16,16 @@ const navItems = ref([
     type: "class"
   } , 
   {
+    name : 'Recent',
+    path : '/recent',
+    type : 'recent'
+  } ,
+  {
     name: "About",
     path: "/about",
     type: "about"
-  }
+  } , 
+  
 ]);
 
 const toggleSidebar = () => {
