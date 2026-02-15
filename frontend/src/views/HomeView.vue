@@ -1,7 +1,8 @@
 <script setup>
-import { nextTick, ref } from 'vue';
+import { nextTick, onMounted, ref } from 'vue';
 import mermaid from 'mermaid';
 import { SequenceDiagramFactory } from '@/factory/diagramFactory';
+import PocketBase from 'pocketbase';
 
 // initialize mermaid theme and security level
 mermaid.initialize({ 
@@ -10,14 +11,46 @@ mermaid.initialize({
   securityLevel: 'loose',
 });
 
+
+
+
+
+
 // define expert from sequence diagram factory variable  
 const expert = SequenceDiagramFactory.sequence;
 
 const userPrompt = ref("");
 const resultDiagram = ref("");
 const loading = ref(false);
+const apiData = ref(null);
 
 
+
+// ================================================= test connection to pocketbase ======================================================== //
+
+
+
+
+const testConnection = async() =>{
+
+  try {
+  const response = await fetch('http://127.0.0.1:8090/api/test');
+  if (!response.ok) throw new Error("Connection to PocketBase failed.");
+  if(response.status === 200) console.log("Connection to PocketBase successful!");
+  
+  const json = await response.json();
+  apiData.value = json.data;
+
+  } catch (error) {
+    console.error('Error:', error);
+    apiData.value = "Error: " + error.message;
+  }
+  
+}
+
+onMounted(() => {
+  testConnection();
+});
 
 // ============================================== generate sequence diagram ======================================================== //
 
