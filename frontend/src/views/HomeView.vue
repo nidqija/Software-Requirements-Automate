@@ -2,7 +2,8 @@
 import { nextTick, onMounted, ref } from 'vue';
 import mermaid from 'mermaid';
 import { SequenceDiagramFactory } from '@/factory/diagramFactory';
-import PocketBase from 'pocketbase';
+import axios from 'axios';
+
 
 // initialize mermaid theme and security level
 mermaid.initialize({ 
@@ -12,7 +13,18 @@ mermaid.initialize({
 });
 
 
+onMounted(async() =>{
+  try {
+    await axios.get('http://localhost:8090/api/test' , {
+      withCredentials: true,
+    });
 
+    console.log("Session initialized. The browser is now holding your ID.");
+
+  } catch (error) {
+    console.error('Error:', error);
+  }
+})
 
 
 
