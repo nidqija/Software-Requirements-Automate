@@ -4,12 +4,12 @@ import (
 	"log"
 	"mime/multipart"
 	"net/http"
-
 	"github.com/google/uuid"
 	"github.com/pocketbase/pocketbase"
 	"github.com/pocketbase/pocketbase/apis"
 	"github.com/pocketbase/pocketbase/core"
 	"github.com/pocketbase/pocketbase/tools/filesystem"
+    "github.com/pocketbase/dbx" 
 )
 
 // ===================== insert new user record with sessionId (pbid) into srauto_users collection ====================  //
@@ -75,13 +75,47 @@ func insertSequenceDiagram(app *pocketbase.PocketBase , prompt string , sessionI
         log.Printf("SAVE FAILED: %v", err) 
         return err
       }
-      
+
 
       log.Printf("Diagram record created for ID: %s" , record.Id)
       return nil
 
 
 }
+
+
+// ========================== fetch sequence diagram records for a specific session ID ============================== //
+
+
+func fetchDiagramsBySessionId(app *pocketbase.PocketBase, sessionId string) ([]*core.Record, error) {
+    collection , err := app.FindCollectionByNameOrId("srauto_sequenceDiagram")
+
+    if err != nil {
+        log.Printf("Error finding collection: %v", err)
+        return nil, err
+    }
+
+    // query the collection for records where sessionID field matches the provided sessionId
+
+    records := []*core.Record{}
+
+    err = app.RecordQuery(collection).
+        AndWhere(dbx.HashExp{"sessionID": sessionId}). 
+        OrderBy("created DESC").
+        All(&records)
+
+    if err != nil {
+        log.Printf("Error fetching records: %v", err)
+        return nil, err
+    }
+
+    log.Printf("Fetched %d diagrams for session ID: %s", len(records), sessionId)
+    return records , nil
+
+
+}
+
+// =================================================================================================================== //
 
 // =============== helper to ensure we don't create duplicates if user already has a cookie and record ============= //
 
@@ -235,9 +269,46 @@ func main() {
         AllowCredentials: true,
     }))
 
+
+    se.Router.GET("/api/fetch-diagrams", func(e *core.RequestEvent) error {
+
+        // check for client_id cookie to identify user session
+        cookie , err := e.Request.Cookie("client_id")
+
+        if err != nil {
+            log.Printf("No client_id cookie found: %v", err)
+            return e.BadRequestError("No client_id cookie found", err)
+        }
+
+        sessionId := cookie.Value
+
+
+        record , err := fetchDiagramsBySessionId(app, sessionId)
+
+        if err != nil {
+            log.Printf("Error fetching diagrams: %v", err)
+            return e.InternalServerError("Failed to fetch diagrams", err)
+        }
+
+        return e.JSON(http.StatusOK, map[string]any{
+            "status": "success",
+            "diagrams": record,
+        })
+
+
+
+    }).Bind(apis.CORS(apis.CORSConfig{
+        AllowOrigins: []string{"http://localhost:5173"},
+        AllowCredentials: true,
+    }))
+
     // after setting up route and middleware , start the PocketBase server and log any errors that occur during startup
     return se.Next()
 })
+
+
+
+
 
         // if the pocketbase server fails to start, log the error and exit the application
             if err := app.Start(); err != nil {

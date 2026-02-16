@@ -2,6 +2,7 @@ import { createRouter, createWebHistory } from 'vue-router'
 import HomeView from '../views/HomeView.vue'
 import AboutView from '../views/AboutView.vue'
 import ClassDiagramView from '../views/ClassDiagramView.vue'
+import RecentView from '../views/RecentView.vue'
 
 const routes = [
     {
@@ -14,6 +15,12 @@ const routes = [
         name: 'About',
         component: AboutView,
     },
+
+    {
+        path : '/recent',
+        name : 'Recent',
+        component : RecentView,
+    } ,
 
     {
         path: '/class-diagram',
