@@ -97,6 +97,7 @@ const generateDiagram = async () => {
 
     if (!response.ok) throw new Error("Connection to Ollama failed.");
 
+
     const data = await response.json();
     let aiReply = data.message.content.trim();
 
@@ -120,7 +121,9 @@ const generateDiagram = async () => {
       
     
       await mermaid.run({ nodes: [element] });
+      await saveDiagramToDB(); 
     }
+
 
   } catch (error) {
     console.error('Error:', error);
@@ -223,6 +226,43 @@ img.src = `data:image/svg+xml;charset=utf-8,${encodedData}`;
     alert("Error copying image");
   }
 }
+
+// ======================================================================================================================== //
+
+
+
+// ==================================== async function to store sequence diagram to db ==================================== //
+
+
+
+const saveDiagramToDB = async () => {
+  const svgElement = document.querySelector("#mermaid-box svg");
+  if (!svgElement) return;
+
+  try {
+    
+    const svgData = new XMLSerializer().serializeToString(svgElement);
+    const blob = new Blob([svgData], { type: "image/svg+xml" });
+    const file = new File([blob], `diagram_${Date.now()}.svg`, { type: "image/svg+xml" });
+
+    const formData = new FormData();
+    formData.append("diagram", file);
+    formData.append("prompt", userPrompt.value);
+
+    await axios.post('http://localhost:8090/api/submit-diagram', formData, {
+      headers: {
+        'Content-Type': 'multipart/form-data'
+      },
+      withCredentials: true
+    });
+
+  } catch (error) {
+    console.error('DB Save Error:', error);
+  }
+};
+
+// =============================================================================================================== //
+
 
 
 </script>

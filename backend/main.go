@@ -1,15 +1,16 @@
-        package main
+package main
 
-        import (
-            "log"
-            "net/http"
+import (
+	"log"
+	"mime/multipart"
+	"net/http"
 
-            "github.com/google/uuid"
-            "github.com/pocketbase/pocketbase"
-            "github.com/pocketbase/pocketbase/apis"
-            "github.com/pocketbase/pocketbase/core"
-        )
-
+	"github.com/google/uuid"
+	"github.com/pocketbase/pocketbase"
+	"github.com/pocketbase/pocketbase/apis"
+	"github.com/pocketbase/pocketbase/core"
+	"github.com/pocketbase/pocketbase/tools/filesystem"
+)
 
 // ===================== insert new user record with sessionId (pbid) into srauto_users collection ====================  //
 
@@ -44,6 +45,43 @@ func insertUsers(app *pocketbase.PocketBase , pbid string) error {
             return nil
         }
 
+// ===================== insert new sequence diagram record with user prompt, sessionId and file into srauto_sequenceDiagram collection ====================  //
+
+func insertSequenceDiagram(app *pocketbase.PocketBase , prompt string , sessionId string , multipartFile *multipart.FileHeader) error {
+
+      collection , err := app.FindCachedCollectionByNameOrId("srauto_sequenceDiagram")
+
+      if err != nil {
+        log.Printf("Error finding collection: %v", err)
+        return err
+      }
+
+      // create a new file object from provided file path using pocketbase's filesystem library
+      file , err := filesystem.NewFileFromMultipart(multipartFile)
+
+      if err != nil {
+        log.Printf("Error creating file from multipart: %v", err)
+        return err
+      }
+
+    
+      record := core.NewRecord(collection)
+
+      record.Set("user_prompt" , prompt)
+      record.Set("sessionID" , sessionId)
+      record.Set("sequence_diagram" , file)
+
+      if err := app.Save(record); err != nil {
+        log.Printf("SAVE FAILED: %v", err) 
+        return err
+      }
+      
+
+      log.Printf("Diagram record created for ID: %s" , record.Id)
+      return nil
+
+
+}
 
 // =============== helper to ensure we don't create duplicates if user already has a cookie and record ============= //
 
@@ -144,6 +182,56 @@ func main() {
     }).Bind(apis.CORS(apis.CORSConfig{
         // Allow requests from the frontend development server
         AllowOrigins:     []string{"http://localhost:5173"},
+        AllowCredentials: true,
+    }))
+
+
+    se.Router.POST("/api/submit-diagram", func(e *core.RequestEvent) error {
+        
+        // check for the client_id cookie to identify the user session
+        cookie , err := e.Request.Cookie("client_id")
+
+        // if cookie is not found , log the error
+        if err != nil {
+            log.Printf("No client_id cookie found: %v", err)
+
+        }
+
+        // if cookie is found , extract the session ID from cookie value
+        sessionId := cookie.Value
+
+
+        // extract the user prompt 
+        prompt := e.Request.FormValue("prompt")
+        // extract the uploading file from multipart form 
+        _, file, err := e.Request.FormFile("diagram")
+
+
+        // if there's an error reading the file , log the error
+        if err!= nil {
+            log.Printf("Error reading file from request: %v", err)
+            return e.BadRequestError("Failed to read file from request", err)
+         }
+        
+
+        
+       // launch the function record to database
+       if err := insertSequenceDiagram(app, prompt, sessionId, file); err != nil {
+
+        // if error , log the error and return internal server error to client
+        log.Printf("Error inserting sequence diagram: %v", err)
+        return e.InternalServerError("Failed to save sequence diagram", err)
+       }
+
+       // if successful , return a json response to client
+       return e.JSON(http.StatusOK, map[string]any{
+        "status": "success",
+        "message": "Sequence diagram saved successfully",
+       })
+
+       // bind cors middleware to allow requests from frontend
+    }).Bind(apis.CORS(apis.CORSConfig{
+        AllowOrigins: []string{"http://localhost:5173"},
         AllowCredentials: true,
     }))
 
