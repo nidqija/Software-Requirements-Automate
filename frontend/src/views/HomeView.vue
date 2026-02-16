@@ -13,18 +13,7 @@ mermaid.initialize({
 });
 
 
-onMounted(async() =>{
-  try {
-    await axios.get('http://localhost:8090/api/test' , {
-      withCredentials: true,
-    });
 
-    console.log("Session initialized. The browser is now holding your ID.");
-
-  } catch (error) {
-    console.error('Error:', error);
-  }
-})
 
 
 
@@ -38,6 +27,7 @@ const apiData = ref(null);
 
 
 
+
 // ================================================= test connection to pocketbase ======================================================== //
 
 
@@ -46,12 +36,22 @@ const apiData = ref(null);
 const testConnection = async() =>{
 
   try {
-  const response = await fetch('http://127.0.0.1:8090/api/test');
+
+  const response = await fetch('http://localhost:8090/api/test' , {
+    credentials: 'include' 
+  });
+
   if (!response.ok) throw new Error("Connection to PocketBase failed.");
   if(response.status === 200) console.log("Connection to PocketBase successful!");
   
   const json = await response.json();
-  apiData.value = json.data;
+  apiData.value = json.pbid;
+
+  console.log("Your PBID from PocketBase is:", apiData.value);
+
+  
+
+  
 
   } catch (error) {
     console.error('Error:', error);
@@ -232,9 +232,13 @@ img.src = `data:image/svg+xml;charset=utf-8,${encodedData}`;
     <section class="hero">
       <h1 class="title">SR Automate</h1>
       <p class="subtitle">Create your sequence diagram in minutes!</p>
+       <p v-if="apiData" class="user-status">
+      Session active: {{ apiData.substring(0, 100) }}...
+     </p>
     </section>
 
     <section class="content-grid">
+     
       <div class="card">
         <h2>Prompt</h2>
         <textarea id="prompt" v-model="userPrompt" placeholder="Enter your user story or functional requirement"></textarea>
