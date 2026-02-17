@@ -78,9 +78,9 @@ onMounted(() => {
          <div class="card" v-for="diagram in recentDiagrams" :key="diagram.id">
            <p style="padding: 10px; text-align: start;">{{ formatDate(diagram.created) }}</p>
            <h5 style="text-align: start; padding: 10px;">{{ diagram.user_prompt }}</h5>
-           
+           <h5 class="diagram-type">{{ diagram.diagram_type }}</h5>
            <img 
-              :src="`http://localhost:8090/api/files/srauto_sequenceDiagram/${diagram.id}/${diagram.sequence_diagram}`"
+              :src="`http://localhost:8090/api/files/srauto_diagrams/${diagram.id}/${diagram.diagram_png}`"
               alt="Sequence Diagram"
               style="width: 80%; margin-top: 1rem; border-radius: 4px;"
             />
@@ -133,6 +133,16 @@ onMounted(() => {
   font-family: 'Inter', sans-serif;
   color: #2c3e50;
   line-height: 1.6;
+}
+
+.diagram-type{
+  text-align: center;
+  padding: 10px ;
+  background: linear-gradient(45deg, #42b883, #35495e);
+  color: white;
+  width: 20%;
+  border-radius: 20px;
+  margin-top: 10px;
 }
 
 .hero {

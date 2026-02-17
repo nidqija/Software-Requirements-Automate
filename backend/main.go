@@ -49,7 +49,8 @@ func insertUsers(app *pocketbase.PocketBase , pbid string) error {
 
 func insertSequenceDiagram(app *pocketbase.PocketBase , prompt string , sessionId string , multipartFile *multipart.FileHeader) error {
 
-      collection , err := app.FindCachedCollectionByNameOrId("srauto_sequenceDiagram")
+      collection , err := app.FindCachedCollectionByNameOrId("srauto_diagrams")
+      diagram_type := "sequence_diagram"
 
       if err != nil {
         log.Printf("Error finding collection: %v", err)
@@ -59,24 +60,32 @@ func insertSequenceDiagram(app *pocketbase.PocketBase , prompt string , sessionI
       // create a new file object from provided file path using pocketbase's filesystem library
       file , err := filesystem.NewFileFromMultipart(multipartFile)
 
+      // if there's an error creating the file object , it will log the error and return it
       if err != nil {
         log.Printf("Error creating file from multipart: %v", err)
         return err
       }
 
     
+      // creating a new record in collection
       record := core.NewRecord(collection)
 
+      // set the user prompt , session ID and file fields of the record
       record.Set("user_prompt" , prompt)
       record.Set("sessionID" , sessionId)
-      record.Set("sequence_diagram" , file)
+      record.Set("diagram_png" , file)
+      record.Set("diagram_type" , diagram_type)
 
+
+
+      // save the record to db 
+      // if error , log the error and return it
       if err := app.Save(record); err != nil {
         log.Printf("SAVE FAILED: %v", err) 
         return err
       }
 
-
+      // if save is successful , log the new record id for debugging purposes
       log.Printf("Diagram record created for ID: %s" , record.Id)
       return nil
 
@@ -88,8 +97,11 @@ func insertSequenceDiagram(app *pocketbase.PocketBase , prompt string , sessionI
 
 
 func fetchDiagramsBySessionId(app *pocketbase.PocketBase, sessionId string) ([]*core.Record, error) {
-    collection , err := app.FindCollectionByNameOrId("srauto_sequenceDiagram")
 
+    // find the collection defined in the pocketbase admin UI
+    collection , err := app.FindCollectionByNameOrId("srauto_diagrams")
+
+    // if collection is not found , log the error and return it
     if err != nil {
         log.Printf("Error finding collection: %v", err)
         return nil, err
@@ -99,16 +111,19 @@ func fetchDiagramsBySessionId(app *pocketbase.PocketBase, sessionId string) ([]*
 
     records := []*core.Record{}
 
+    // the query uses andwhere to filter records by session ID and orders 
     err = app.RecordQuery(collection).
-        AndWhere(dbx.HashExp{"sessionID": sessionId}). 
+        AndWhere(dbx.HashExp{"sessionID": sessionId }). 
         OrderBy("created DESC").
         All(&records)
 
+    // if error , log the error and return it
     if err != nil {
         log.Printf("Error fetching records: %v", err)
         return nil, err
     }
 
+    // if successful , log the numebr of records fetch for the session id
     log.Printf("Fetched %d diagrams for session ID: %s", len(records), sessionId)
     return records , nil
 

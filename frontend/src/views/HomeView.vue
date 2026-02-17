@@ -47,10 +47,9 @@ const testConnection = async() =>{
   const json = await response.json();
   apiData.value = json.pbid;
 
-  console.log("Your PBID from PocketBase is:", apiData.value);
 
-  
-
+  // just wanna check if the session ID is being set correctly in the backend
+  console.log("Session Active: " + apiData.value);
   
 
   } catch (error) {
@@ -169,59 +168,59 @@ const copyImageToClipboard = async () => {
     const contentWidth = bBox.width + padding;
     const contentHeight = bBox.height + padding;
 
-    // 2. Clone SVG and set explicit viewBox + dimensions so the
-    //    Image element renders at the exact size we expect
+    // 2. Clone SVG and set explicit viewBox + dimensions
     const svgClone = svgElement.cloneNode(true);
+    // Center content by offsetting x and y by half the padding
     svgClone.setAttribute("viewBox", `${bBox.x - padding / 2} ${bBox.y - padding / 2} ${contentWidth} ${contentHeight}`);
     svgClone.setAttribute("width", contentWidth);
     svgClone.setAttribute("height", contentHeight);
 
     // 3. Serialize the corrected SVG
     const svgData = new XMLSerializer().serializeToString(svgClone);
-    const svgBlob = new Blob([svgData], { type: "image/svg+xml;charset=utf-8" });
-    const url = URL.createObjectURL(svgBlob);
-
+    
     // 4. Draw onto a high-res canvas
     const canvas = document.createElement("canvas");
     const ctx = canvas.getContext("2d");
+    
+    // Set physical pixel dimensions
     canvas.width = contentWidth * scaleFactor;
     canvas.height = contentHeight * scaleFactor;
+    
+    // Scale the coordinate system
     ctx.scale(scaleFactor, scaleFactor);
 
-   // ... inside copyImageToClipboard, after creating the 'img' constant
+    const img = new Image();
+    img.crossOrigin = "anonymous"; 
 
-const img = new Image();
-// 1. Set crossOrigin to Anonymous to prevent tainting
-img.crossOrigin = "anonymous"; 
-
-img.onload = () => {
-  ctx.fillStyle = "white";
-  ctx.fillRect(0, 0, canvas.width, canvas.height);
-  
-  // Use the scaled content dimensions
-  ctx.drawImage(img, 0, 0, contentWidth * scaleFactor, contentHeight * scaleFactor);
-
-  try {
-    canvas.toBlob((blob) => {
-      if (!blob) throw new Error("Blob creation failed");
+    img.onload = () => {
+      // Draw background - use contentWidth/Height because of ctx.scale
+      ctx.fillStyle = "white";
+      ctx.fillRect(0, 0, contentWidth, contentHeight);
       
-      const item = new ClipboardItem({ "image/png": blob });
-      navigator.clipboard.write([item]).then(() => {
-        alert("Full HD Diagram copied!");
-        URL.revokeObjectURL(url);
-      });
-    }, "image/png", 1.0);
-  } catch (err) {
-    console.error("Export failed:", err);
-    alert("Canvas tainted. Try using a different browser or downloading as SVG.");
-  }
-};
+      // DRAW: Use the UNSCALED dimensions. 
+      // ctx.scale(3,3) handles the multiplication for you.
+      ctx.drawImage(img, 0, 0, contentWidth, contentHeight);
 
-// 2. Encode the SVG string properly using encodeURIComponent
-// This is often more reliable than a raw Blob URL for canvas drawing
-const encodedData = encodeURIComponent(svgData);
-img.src = `data:image/svg+xml;charset=utf-8,${encodedData}`;
-} catch (error) {
+      try {
+        canvas.toBlob((blob) => {
+          if (!blob) throw new Error("Blob creation failed");
+          
+          const item = new ClipboardItem({ "image/png": blob });
+          navigator.clipboard.write([item]).then(() => {
+            alert("Full HD Diagram copied!");
+          });
+        }, "image/png", 1.0);
+      } catch (err) {
+        console.error("Export failed:", err);
+        alert("Export failed.");
+      }
+    };
+
+    // Encode properly for data URL
+    const encodedData = encodeURIComponent(svgData);
+    img.src = `data:image/svg+xml;charset=utf-8,${encodedData}`;
+
+  } catch (error) {
     console.error('Copy Error:', error);
     alert("Error copying image");
   }
@@ -248,6 +247,7 @@ const saveDiagramToDB = async () => {
     const formData = new FormData();
     formData.append("diagram", file);
     formData.append("prompt", userPrompt.value);
+    
 
     await axios.post('http://localhost:8090/api/submit-diagram', formData, {
       headers: {
@@ -272,9 +272,7 @@ const saveDiagramToDB = async () => {
     <section class="hero">
       <h1 class="title">SR Automate</h1>
       <p class="subtitle">Create your sequence diagram in minutes!</p>
-       <p v-if="apiData" class="user-status">
-      Session active: {{ apiData.substring(0, 100) }}...
-     </p>
+       
     </section>
 
     <section class="content-grid">

@@ -67,7 +67,8 @@ const SequenceDiagramFactory = {
                 .replace(/Systemelse/g, 'System\nelse')
                 .replace(/endelse/g, 'end\nelse')
                 .replace(/deactivateSystem/g, 'deactivate System')
-                .replace(/activateSystem/g, 'activate System');
+                .replace(/activateSystem/g, 'activate System')
+                .replace(/^\s*\d+[\.\)]\s*/gm, '');
         }
 
 
@@ -110,7 +111,8 @@ const ClassDiagramFactory = {
                 .replace(/Systemelse/g, 'System\nelse')
                 .replace(/endelse/g, 'end\nelse')
                 .replace(/deactivateSystem/g, 'deactivate System')
-                .replace(/activateSystem/g, 'activate System');
+                .replace(/activateSystem/g, 'activate System')
+                .replace(/^\s*\d+[\.\)]\s*/gm, '');
         }
 
 
