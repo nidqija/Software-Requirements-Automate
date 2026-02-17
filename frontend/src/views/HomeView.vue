@@ -247,6 +247,7 @@ const saveDiagramToDB = async () => {
     const formData = new FormData();
     formData.append("diagram", file);
     formData.append("prompt", userPrompt.value);
+    formData.append("diagramType", "sequence_diagram");
     
 
     await axios.post('http://localhost:8090/api/submit-diagram', formData, {

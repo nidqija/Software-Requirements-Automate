@@ -47,10 +47,9 @@ func insertUsers(app *pocketbase.PocketBase , pbid string) error {
 
 // ===================== insert new sequence diagram record with user prompt, sessionId and file into srauto_sequenceDiagram collection ====================  //
 
-func insertSequenceDiagram(app *pocketbase.PocketBase , prompt string , sessionId string , multipartFile *multipart.FileHeader) error {
+func insertDiagram(app *pocketbase.PocketBase , prompt string , diagramType string,  sessionId string , multipartFile *multipart.FileHeader) error {
 
       collection , err := app.FindCachedCollectionByNameOrId("srauto_diagrams")
-      diagram_type := "sequence_diagram"
 
       if err != nil {
         log.Printf("Error finding collection: %v", err)
@@ -74,7 +73,7 @@ func insertSequenceDiagram(app *pocketbase.PocketBase , prompt string , sessionI
       record.Set("user_prompt" , prompt)
       record.Set("sessionID" , sessionId)
       record.Set("diagram_png" , file)
-      record.Set("diagram_type" , diagram_type)
+      record.Set("diagram_type" , diagramType)
 
 
 
@@ -91,6 +90,9 @@ func insertSequenceDiagram(app *pocketbase.PocketBase , prompt string , sessionI
 
 
 }
+
+
+
 
 
 // ========================== fetch sequence diagram records for a specific session ID ============================== //
@@ -254,6 +256,8 @@ func main() {
         prompt := e.Request.FormValue("prompt")
         // extract the uploading file from multipart form 
         _, file, err := e.Request.FormFile("diagram")
+        // extract the diagram type from multipart form
+        diagramType := e.Request.FormValue("diagramType")
 
 
         // if there's an error reading the file , log the error
@@ -265,17 +269,20 @@ func main() {
 
         
        // launch the function record to database
-       if err := insertSequenceDiagram(app, prompt, sessionId, file); err != nil {
+       if err := insertDiagram(app, prompt, diagramType, sessionId, file); err != nil {
 
         // if error , log the error and return internal server error to client
-        log.Printf("Error inserting sequence diagram: %v", err)
-        return e.InternalServerError("Failed to save sequence diagram", err)
+        log.Printf("Error inserting diagram of type %s: %v", diagramType, err)
+        return e.InternalServerError("Failed to save diagram", err)
        }
+
+
+       
 
        // if successful , return a json response to client
        return e.JSON(http.StatusOK, map[string]any{
         "status": "success",
-        "message": "Sequence diagram saved successfully",
+        "message": "Diagram saved successfully",
        })
 
        // bind cors middleware to allow requests from frontend
@@ -283,6 +290,7 @@ func main() {
         AllowOrigins: []string{"http://localhost:5173"},
         AllowCredentials: true,
     }))
+
 
 
     se.Router.GET("/api/fetch-diagrams", func(e *core.RequestEvent) error {

@@ -2,6 +2,7 @@
 import { nextTick, ref } from 'vue';
 import mermaid from 'mermaid';
 import { ClassDiagramFactory } from '@/factory/diagramFactory';
+import axios from 'axios';
 // insert code and function def here
 
 
@@ -59,6 +60,7 @@ const generateDiagram = async() =>{
      resultDiagram.value = finalCleanCode;
 
      await nextTick();
+     
 
      const element = document.getElementById("mermaid-box");
      if (element) {
@@ -68,6 +70,8 @@ const generateDiagram = async() =>{
        await mermaid.run({
          nodes: [element],
        });
+
+        await saveDiagramToDB();
 }
 
      } 
@@ -79,6 +83,35 @@ const generateDiagram = async() =>{
     loading.value = false;
     }
   }
+
+
+const saveDiagramToDB = async () => {
+  const svgElement = document.querySelector("#mermaid-box svg");
+  if (!svgElement) return;
+
+  try {
+    
+    const svgData = new XMLSerializer().serializeToString(svgElement);
+    const blob = new Blob([svgData], { type: "image/svg+xml" });
+    const file = new File([blob], `diagram_${Date.now()}.svg`, { type: "image/svg+xml" });
+
+    const formData = new FormData();
+    formData.append("diagram", file);
+    formData.append("prompt", userPrompt.value);
+    formData.append("diagramType", "class_diagram");
+    
+
+    await axios.post('http://localhost:8090/api/submit-diagram', formData, {
+      headers: {
+        'Content-Type': 'multipart/form-data'
+      },
+      withCredentials: true
+    });
+
+  } catch (error) {
+    console.error('DB Save Error:', error);
+  }
+};
 
  
 
