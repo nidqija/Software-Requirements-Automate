@@ -47,7 +47,6 @@ onMounted(() => {
 
 
 
-
 </script>
 
 
@@ -75,14 +74,17 @@ onMounted(() => {
 
        <div class="content-grid" v-else>
          <div class="card" v-for="diagram in recentDiagrams" :key="diagram.id">
+          <div>
            <p style="padding: 10px; text-align: start;">{{ formatDate(diagram.created) }}</p>
-           <h5 style="text-align: start; padding: 10px;">{{ diagram.user_prompt }}</h5>
-           <h5 class="diagram-type">{{ diagram.diagram_type }}</h5>
+           <p style="text-align: start; padding: 10px;">{{ diagram.user_prompt }}</p>
+           <p class="diagram-type">{{ diagram.diagram_type }}</p>
            <img 
               :src="`http://localhost:8090/api/files/srauto_diagrams/${diagram.id}/${diagram.diagram_png}`"
               alt="Sequence Diagram"
               style="width: 80%; margin-top: 1rem; border-radius: 4px;"
             />
+          </div>
+
          </div>
          
          
