@@ -27,6 +27,7 @@ const formatDate = (dateString) => {
 
 };
 
+// fetching recent diagrams from backend API upon successful generation 
 
 const fetchRecentDiagrams = async () => {
   try {
@@ -40,10 +41,13 @@ const fetchRecentDiagrams = async () => {
   }
 };
 
+// Fetch recent diagrams when the component is mounted (reloaded)
+
 onMounted(() => {
   fetchRecentDiagrams();
 });
 
+// Function to copy text to clipboard
 
 const copyToClipboard = (text) => {
   navigator.clipboard.writeText(text)
@@ -54,6 +58,32 @@ const copyToClipboard = (text) => {
       console.error('Failed to copy text: ', err);
     });
 };
+
+
+// Function to download image
+
+const downloadImage = async (imageUrl , diagramType , extension = 'svg') =>{
+   try {
+    const response = await fetch(imageUrl);
+    const blob = await response.blob();
+    const url = window.URL.createObjectURL(blob);
+
+    const link = document.createElement('a');
+    link.href = url;
+
+    const filename = `diagram_${diagramType}_${Date.now()}.${extension}`;
+
+    link.setAttribute('download', filename);
+    document.body.appendChild(link);
+    link.click();
+
+    link.remove();
+    window.URL.revokeObjectURL(url);
+   } catch(err){
+    console.error('Failed to download image: ', err);
+    alert('Failed to download image. Please try again.');
+   }
+}
 
 
 
@@ -96,7 +126,7 @@ const copyToClipboard = (text) => {
            <ul class="dropdown-menu">
               <li><a class="dropdown-item" href="#" @click="copyToClipboard(diagram.diagram_code)">Copy diagram code</a></li>
               <li><a class="dropdown-item" href="#" @click="copyToClipboard(diagram.user_prompt)">Copy user prompt</a></li>
-              <li><a class="dropdown-item" href="#" @click="copyToClipboard(diagram.diagram_png)">Copy Diagram Image</a></li>
+              <li><a class="dropdown-item" href="#" @click="downloadImage(`http://localhost:8090/api/files/srauto_diagrams/${diagram.id}/${diagram.diagram_png}`, diagram.diagram_type)">Download Diagram Image</a></li>
           </ul>
           </div>
            <img 
