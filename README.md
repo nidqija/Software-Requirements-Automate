@@ -32,3 +32,7 @@ SR_Automate/
 ├── .venv/               # Python Virtual Environment
 └── package.json         # Root orchestration
 
+---
+
+## 📚 Documentation
+- **Software Requirements**: https://docs.google.com/document/d/1AJgbtDQgTli-4sOeMn2EfwC8PVFq6g-l/edit#heading=h.k2hqyx1pgi0a
