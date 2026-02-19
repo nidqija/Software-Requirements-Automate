@@ -44,7 +44,7 @@ const SequenceDiagramFactory = {
         role: 'system',
         header: 'sequenceDiagram',
         systemPrompt: `
-        You are a Mermaid generator. 
+        You are a Mermaid generator for sequence diagrams. 
            Rules:
            1. Start with 'sequenceDiagram'.
            2. EVERY command must be on a NEW LINE.
@@ -79,7 +79,7 @@ const ClassDiagramFactory = {
         role: 'system',
         header: 'classDiagram',
         systemPrompt: `
-        You are a Mermaid generator. 
+        You are a Mermaid generator for class diagrams. 
            Rules:
            1. Start with 'classDiagram'.
            2. EVERY command must be on a NEW LINE.
@@ -118,4 +118,45 @@ const ClassDiagramFactory = {
     },
 }
 
-export { SequenceDiagramFactory, ClassDiagramFactory }
+
+
+const FlowchartFactory = {
+    flowchart: {
+        role: 'system',
+        header: 'flowChart',
+        systemPrompt: `
+        You are a Mermaid generator for flowcharts. 
+            Rules:
+            1. Start with 'flowchart TD'.
+            2. EVERY command must be on a NEW LINE.
+            3. Use Nodes with Shapes:
+               - [Rectangle] for Actions
+               - {Diamond} for Decisions
+               - ([Pill]) for Start/End
+            4. Connections use '-->' or '-- text -->'.
+            5. NO backticks. NO explanations.
+
+            Example:
+            flowchart TD
+            A([Start]) --> B{Is Logged In?}
+            B -- Yes --> C[Go to Dashboard]
+            B -- No --> D[Go to Login Page]
+            D --> E([End])
+        ` ,
+        fixer: (raw) => {
+    let code = baseCleaner(raw);
+    return code
+        // This regex finds 'flowchart TD' (or LR) and ensures there's a newline after it
+        .replace(/(flowchart\s+[A-Z]{2})([^\n])/i, '$1\n$2') 
+        .replace(/^\s*\d+[\.\)]\s*/gm, '');
+}
+
+
+    },
+}
+
+
+
+
+
+export { SequenceDiagramFactory, ClassDiagramFactory , FlowchartFactory };

@@ -15,6 +15,12 @@ const navItems = ref([
     path: "/class-diagram",
     type: "class"
   } , 
+
+  {
+    name: "Flowchart",
+    path: "/flowchart",
+    type: "flowchart"
+  } ,
   {
     name : 'Recent',
     path : '/recent',

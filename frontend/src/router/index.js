@@ -3,6 +3,7 @@ import HomeView from '../views/HomeView.vue'
 import AboutView from '../views/AboutView.vue'
 import ClassDiagramView from '../views/ClassDiagramView.vue'
 import RecentView from '../views/RecentView.vue'
+import FlowChartView from '../views/FlowChartView.vue'
 
 const routes = [
     {
@@ -26,6 +27,12 @@ const routes = [
         path: '/class-diagram',
         name: 'ClassDiagram',
         component: ClassDiagramView,
+    } ,
+
+    {
+        path: '/flowchart',
+        name: 'Flowchart',
+        component: FlowChartView,
     }
 ]
 
