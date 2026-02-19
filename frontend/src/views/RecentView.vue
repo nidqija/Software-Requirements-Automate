@@ -45,6 +45,17 @@ onMounted(() => {
 });
 
 
+const copyToClipboard = (text) => {
+  navigator.clipboard.writeText(text)
+    .then(() => {
+      alert('Diagram code copied to clipboard!');
+    })
+    .catch((err) => {
+      console.error('Failed to copy text: ', err);
+    });
+};
+
+
 
 
 </script>
@@ -78,14 +89,24 @@ onMounted(() => {
            <p style="padding: 10px; text-align: start;">{{ formatDate(diagram.created) }}</p>
            <p style="text-align: start; padding: 10px;">{{ diagram.user_prompt }}</p>
            <p class="diagram-type">{{ diagram.diagram_type }}</p>
+           <div class="dropdown flex justify-content-end" style="position: absolute; top: 10px; right: 10px;">
+             <button class="dropdown-toggle" type="button" data-bs-toggle="dropdown" aria-expanded="false">
+              ...
+             </button>
+           <ul class="dropdown-menu">
+              <li><a class="dropdown-item" href="#" @click="copyToClipboard(diagram.diagram_code)">Copy diagram code</a></li>
+              <li><a class="dropdown-item" href="#" @click="copyToClipboard(diagram.user_prompt)">Copy user prompt</a></li>
+              <li><a class="dropdown-item" href="#" @click="copyToClipboard(diagram.diagram_png)">Copy Diagram Image</a></li>
+          </ul>
+          </div>
            <img 
               :src="`http://localhost:8090/api/files/srauto_diagrams/${diagram.id}/${diagram.diagram_png}`"
               alt="Sequence Diagram"
               style="width: 80%; margin-top: 1rem; border-radius: 4px;"
             />
-          </div>
+          
 
-         </div>
+          </div>
          
          
          
@@ -94,6 +115,7 @@ onMounted(() => {
     
        </div>
     </div>
+  </div>
   </div>
   </section>
   </main>

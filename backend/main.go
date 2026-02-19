@@ -47,7 +47,7 @@ func insertUsers(app *pocketbase.PocketBase , pbid string) error {
 
 // ===================== insert new sequence diagram record with user prompt, sessionId and file into srauto_sequenceDiagram collection ====================  //
 
-func insertDiagram(app *pocketbase.PocketBase , prompt string , diagramType string,  sessionId string , multipartFile *multipart.FileHeader) error {
+func insertDiagram(app *pocketbase.PocketBase , prompt string , diagramType string,  sessionId string , multipartFile *multipart.FileHeader , diagramCode string) error {
 
       collection , err := app.FindCachedCollectionByNameOrId("srauto_diagrams")
 
@@ -74,8 +74,7 @@ func insertDiagram(app *pocketbase.PocketBase , prompt string , diagramType stri
       record.Set("sessionID" , sessionId)
       record.Set("diagram_png" , file)
       record.Set("diagram_type" , diagramType)
-
-
+      record.Set("diagram_code" , diagramCode)
 
       // save the record to db 
       // if error , log the error and return it
@@ -258,6 +257,8 @@ func main() {
         _, file, err := e.Request.FormFile("diagram")
         // extract the diagram type from multipart form
         diagramType := e.Request.FormValue("diagramType")
+        // extract the diagram code from multipart form
+        diagramCode := e.Request.FormValue("diagramCode")
 
 
         // if there's an error reading the file , log the error
@@ -269,7 +270,7 @@ func main() {
 
         
        // launch the function record to database
-       if err := insertDiagram(app, prompt, diagramType, sessionId, file); err != nil {
+       if err := insertDiagram(app, prompt, diagramType, sessionId, file, diagramCode); err != nil {
 
         // if error , log the error and return internal server error to client
         log.Printf("Error inserting diagram of type %s: %v", diagramType, err)
