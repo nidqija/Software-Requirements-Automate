@@ -145,6 +145,7 @@ const deleteDiagram = async (diagramId) => {
            <ul class="dropdown-menu">
               <li><a class="dropdown-item" href="#" @click="copyToClipboard(diagram.diagram_code)">Copy diagram code</a></li>
               <li><a class="dropdown-item" href="#" @click="copyToClipboard(diagram.user_prompt)">Copy user prompt</a></li>
+              <li><a class="dropdown-item" href="#" @click="$router.push(`/edit-diagram`)">Edit Diagram</a></li>
               <li><a class="dropdown-item" href="#" @click="downloadImage(`http://localhost:8090/api/files/srauto_diagrams/${diagram.id}/${diagram.diagram_png}`, diagram.diagram_type)">Download Diagram Image</a></li>
               <li><a class="dropdown-item" href="#" @click = "deleteDiagram(diagram.id)" >Delete Diagram</a></li>
 

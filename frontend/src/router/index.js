@@ -4,6 +4,7 @@ import AboutView from '../views/AboutView.vue'
 import ClassDiagramView from '../views/ClassDiagramView.vue'
 import RecentView from '../views/RecentView.vue'
 import FlowChartView from '../views/FlowChartView.vue'
+import EditDiagramView from '@/views/EditDiagramView.vue'
 
 const routes = [
     {
@@ -33,6 +34,11 @@ const routes = [
         path: '/flowchart',
         name: 'Flowchart',
         component: FlowChartView,
+    } ,
+    {
+        path: '/edit-diagram',
+        name: 'EditDiagram',
+        component: EditDiagramView,
     }
 ]
 
