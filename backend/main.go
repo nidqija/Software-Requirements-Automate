@@ -4,130 +4,152 @@ import (
 	"log"
 	"mime/multipart"
 	"net/http"
+
 	"github.com/google/uuid"
+	"github.com/pocketbase/dbx"
 	"github.com/pocketbase/pocketbase"
 	"github.com/pocketbase/pocketbase/apis"
 	"github.com/pocketbase/pocketbase/core"
 	"github.com/pocketbase/pocketbase/tools/filesystem"
-    "github.com/pocketbase/dbx" 
 )
 
 // ===================== insert new user record with sessionId (pbid) into srauto_users collection ====================  //
 
-func insertUsers(app *pocketbase.PocketBase , pbid string) error {
+func insertUsers(app *pocketbase.PocketBase, pbid string) error {
 
+	// find collection defined in pocketbase admin UI
+	collection, err := app.FindCollectionByNameOrId("srauto_users")
 
-            // find collection defined in pocketbase admin UI
-            collection , err := app.FindCollectionByNameOrId("srauto_users")
+	// if collection not found , log error and return
+	if err != nil {
+		log.Printf("Error finding collection: %v", err)
+		return err
+	}
 
+	// create new record in that collection
+	record := core.NewRecord(collection)
 
-            // if collection not found , log error and return 
-            if err != nil {
-                log.Printf("Error finding collection: %v", err)
-                return err
-            }
+	// insert the pbid data into the sessionId field of the record
+	record.Set("sessionId", pbid)
 
-            // create new record in that collection
-            record := core.NewRecord(collection)
+	// save the record to the database
+	// if there's an error during save (like validation issues), log it and return
+	if err := app.Save(record); err != nil {
+		log.Printf("SAVE FAILED: %v", err) // This will show validation errors
+		return err
+	}
 
-            // insert the pbid data into the sessionId field of the record
-            record.Set("sessionId" , pbid);
-
-            // save the record to the database
-            // if there's an error during save (like validation issues), log it and return
-            if err := app.Save(record); err != nil {
-              log.Printf("SAVE FAILED: %v", err) // This will show validation errors
-              return err
-            }
-
-            // if save is successful, log the new record ID
-            log.Printf("User record created with ID: %s", record.Id)
-            return nil
-        }
+	// if save is successful, log the new record ID
+	log.Printf("User record created with ID: %s", record.Id)
+	return nil
+}
 
 // ===================== insert new sequence diagram record with user prompt, sessionId and file into srauto_sequenceDiagram collection ====================  //
 
-func insertDiagram(app *pocketbase.PocketBase , prompt string , diagramType string,  sessionId string , multipartFile *multipart.FileHeader , diagramCode string) error {
+func insertDiagram(app *pocketbase.PocketBase, prompt string, diagramType string, sessionId string, multipartFile *multipart.FileHeader, diagramCode string) error {
 
-      collection , err := app.FindCachedCollectionByNameOrId("srauto_diagrams")
+	collection, err := app.FindCachedCollectionByNameOrId("srauto_diagrams")
 
-      if err != nil {
-        log.Printf("Error finding collection: %v", err)
-        return err
-      }
+	if err != nil {
+		log.Printf("Error finding collection: %v", err)
+		return err
+	}
 
-      // create a new file object from provided file path using pocketbase's filesystem library
-      file , err := filesystem.NewFileFromMultipart(multipartFile)
+	// create a new file object from provided file path using pocketbase's filesystem library
+	file, err := filesystem.NewFileFromMultipart(multipartFile)
 
-      // if there's an error creating the file object , it will log the error and return it
-      if err != nil {
-        log.Printf("Error creating file from multipart: %v", err)
-        return err
-      }
+	// if there's an error creating the file object , it will log the error and return it
+	if err != nil {
+		log.Printf("Error creating file from multipart: %v", err)
+		return err
+	}
 
-    
-      // creating a new record in collection
-      record := core.NewRecord(collection)
+	// creating a new record in collection
+	record := core.NewRecord(collection)
 
-      // set the user prompt , session ID and file fields of the record
-      record.Set("user_prompt" , prompt)
-      record.Set("sessionID" , sessionId)
-      record.Set("diagram_png" , file)
-      record.Set("diagram_type" , diagramType)
-      record.Set("diagram_code" , diagramCode)
+	// set the user prompt , session ID and file fields of the record
+	record.Set("user_prompt", prompt)
+	record.Set("sessionID", sessionId)
+	record.Set("diagram_png", file)
+	record.Set("diagram_type", diagramType)
+	record.Set("diagram_code", diagramCode)
 
-      // save the record to db 
-      // if error , log the error and return it
-      if err := app.Save(record); err != nil {
-        log.Printf("SAVE FAILED: %v", err) 
-        return err
-      }
+	// save the record to db
+	// if error , log the error and return it
+	if err := app.Save(record); err != nil {
+		log.Printf("SAVE FAILED: %v", err)
+		return err
+	}
 
-      // if save is successful , log the new record id for debugging purposes
-      log.Printf("Diagram record created for ID: %s" , record.Id)
-      return nil
-
+	// if save is successful , log the new record id for debugging purposes
+	log.Printf("Diagram record created for ID: %s", record.Id)
+	return nil
 
 }
 
+// =================================================================================================================== //
 
+// ===================== delete a diagram record by its ID from srauto_diagrams collection ====================  //
 
+func removeRecentDiagram(app *pocketbase.PocketBase, diagramId string) error {
+	record, err := app.FindRecordById("srauto_diagrams", diagramId)
 
+	if err != nil {
+		log.Printf("Error finding collection name , please check if your collection name is correct: %v", err)
+
+		return err
+	} else {
+		// if record is found in the collection according to the provided diagram ID ,
+		// attempt the delete record function from the collection
+
+		if err := app.Delete(record); err != nil {
+
+			// if the attempt fails , log the error and return it
+			log.Printf("Error deleting diagram with ID %s: %v", diagramId, err)
+			return err
+		}
+
+		// if delete is successful , log the success message with the deleted diagram Id for debugging purposes
+		log.Printf("Diagram with ID %s deleted successfully", diagramId)
+		return nil
+
+	}
+}
+
+// =================================================================================================================== //
 
 // ========================== fetch sequence diagram records for a specific session ID ============================== //
 
-
 func fetchDiagramsBySessionId(app *pocketbase.PocketBase, sessionId string) ([]*core.Record, error) {
 
-    // find the collection defined in the pocketbase admin UI
-    collection , err := app.FindCollectionByNameOrId("srauto_diagrams")
+	// find the collection defined in the pocketbase admin UI
+	collection, err := app.FindCollectionByNameOrId("srauto_diagrams")
 
-    // if collection is not found , log the error and return it
-    if err != nil {
-        log.Printf("Error finding collection: %v", err)
-        return nil, err
-    }
+	// if collection is not found , log the error and return it
+	if err != nil {
+		log.Printf("Error finding collection: %v", err)
+		return nil, err
+	}
 
-    // query the collection for records where sessionID field matches the provided sessionId
+	// query the collection for records where sessionID field matches the provided sessionId
 
-    records := []*core.Record{}
+	records := []*core.Record{}
 
-    // the query uses andwhere to filter records by session ID and orders 
-    err = app.RecordQuery(collection).
-        AndWhere(dbx.HashExp{"sessionID": sessionId }). 
-        OrderBy("created DESC").
-        All(&records)
+	// the query uses andwhere to filter records by session ID and orders
+	err = app.RecordQuery(collection).
+		AndWhere(dbx.HashExp{"sessionID": sessionId}).
+		OrderBy("created DESC").
+		All(&records)
 
-    // if error , log the error and return it
-    if err != nil {
-        log.Printf("Error fetching records: %v", err)
-        return nil, err
-    }
+	// if error , log the error and return it
+	if err != nil {
+		log.Printf("Error fetching records: %v", err)
+		return nil, err
+	}
 
-    // if successful , log the numebr of records fetch for the session id
-    log.Printf("Fetched %d diagrams for session ID: %s", len(records), sessionId)
-    return records , nil
-
+	// if successful , log the numebr of records fetch for the session id
+	log.Printf("Fetched %d diagrams for session ID: %s", len(records), sessionId)
+	return records, nil
 
 }
 
@@ -137,205 +159,225 @@ func fetchDiagramsBySessionId(app *pocketbase.PocketBase, sessionId string) ([]*
 
 func ensureUserExists(app *pocketbase.PocketBase, pbid string) error {
 
-    // find the collection defined in the pocketbase admin UI
-    collection, err := app.FindCollectionByNameOrId("srauto_users")
+	// find the collection defined in the pocketbase admin UI
+	collection, err := app.FindCollectionByNameOrId("srauto_users")
 
-    // if not found , log error and return 
-    if err != nil {
-        return err
-    }
+	// if not found , log error and return
+	if err != nil {
+		return err
+	}
 
-    // Check if sessionId already exists
-    existing, _ := app.FindFirstRecordByData("srauto_users", "sessionId", pbid)
-    if existing != nil {
-        log.Printf("User %s already exists in DB, skipping insert.", pbid)
-        return nil // Already there, nothing to do
-    }
+	// Check if sessionId already exists
+	existing, _ := app.FindFirstRecordByData("srauto_users", "sessionId", pbid)
+	if existing != nil {
+		log.Printf("User %s already exists in DB, skipping insert.", pbid)
+		return nil // Already there, nothing to do
+	}
 
-    // if not found , create a new record and save it
-    record := core.NewRecord(collection)
-    record.Set("sessionId", pbid)
-    
-    // log the new session ID before saving, so we can trace it in logs
-    // Save the new record to the database
-    log.Printf("Inserting new session to DB: %s", pbid)
-    return app.Save(record)
+	// if not found , create a new record and save it
+	record := core.NewRecord(collection)
+	record.Set("sessionId", pbid)
+
+	// log the new session ID before saving, so we can trace it in logs
+	// Save the new record to the database
+	log.Printf("Inserting new session to DB: %s", pbid)
+	return app.Save(record)
 }
 
-// ============================================================================================================= //  
+// ============================================================================================================= //
 
 func main() {
 
-        // create new pocketbase app instance
-        app := pocketbase.New()
+	// create new pocketbase app instance
+	app := pocketbase.New()
 
-        // bind a function to the onserve event , which runs every time the server starts and is ready to handle requests
-        app.OnServe().BindFunc(func(se *core.ServeEvent) error {
+	// bind a function to the onserve event , which runs every time the server starts and is ready to handle requests
+	app.OnServe().BindFunc(func(se *core.ServeEvent) error {
 
-        // define a new GET endpoint at /api/test that will handle incoming requests from the frontend
-        se.Router.GET("/api/test", func(e *core.RequestEvent) error {
-        
-        // check if the incoming request has a cookie named "client_id"
-        cookie, err := e.Request.Cookie("client_id")
+		// define a new GET endpoint at /api/test that will handle incoming requests from the frontend
+		se.Router.GET("/api/test", func(e *core.RequestEvent) error {
 
-        // if cookie is not found (err != nil), we will create a new unique ID for the user and set it as a cookie in the response. 
-        var currentID string
+			// check if the incoming request has a cookie named "client_id"
+			cookie, err := e.Request.Cookie("client_id")
 
-        if err != nil {
-            // if a new user , create a new unique ID using uuid package and set it as a cookie in the response
-            currentID = uuid.New().String()
-            newCookie := &http.Cookie{
-                Name:     "client_id",
-                Value:    currentID,
-                Path:     "/",
-                HttpOnly: true, 
-                MaxAge:   86400 * 365,
-                SameSite: http.SameSiteLaxMode,
-                Secure:   false, 
-            }
+			// if cookie is not found (err != nil), we will create a new unique ID for the user and set it as a cookie in the response.
+			var currentID string
 
-            // Set the cookie in the response so the client can store it for future requests
-            http.SetCookie(e.Response, newCookie)
+			if err != nil {
+				// if a new user , create a new unique ID using uuid package and set it as a cookie in the response
+				currentID = uuid.New().String()
+				newCookie := &http.Cookie{
+					Name:     "client_id",
+					Value:    currentID,
+					Path:     "/",
+					HttpOnly: true,
+					MaxAge:   86400 * 365,
+					SameSite: http.SameSiteLaxMode,
+					Secure:   false,
+				}
 
-            // insert the new record into the database with the new session ID (currentID)
-             if err := insertUsers(app, currentID); err != nil {
+				// Set the cookie in the response so the client can store it for future requests
+				http.SetCookie(e.Response, newCookie)
 
-                // if there's an error inserting the user into the database, log it
-                log.Printf("Error inserting user: %v", err)
+				// insert the new record into the database with the new session ID (currentID)
+				if err := insertUsers(app, currentID); err != nil {
 
-            }
-            
-            // log the new client ID for debugging purposes
-            log.Printf("New client assigned ID: %s", currentID)
-           
-        } else {
-            // if cookie is found, use the existing value as the current ID and log it for debugging purposes
-            currentID = cookie.Value
-            log.Printf("Client returned with ID: %s", currentID)
+					// if there's an error inserting the user into the database, log it
+					log.Printf("Error inserting user: %v", err)
 
-        }
+				}
 
-        // ensure that the user record exists through a helper function
-        if err := ensureUserExists(app, currentID); err != nil {
-        log.Printf("DB Error: %v", err)
+				// log the new client ID for debugging purposes
+				log.Printf("New client assigned ID: %s", currentID)
 
-      }
+			} else {
+				// if cookie is found, use the existing value as the current ID and log it for debugging purposes
+				currentID = cookie.Value
+				log.Printf("Client returned with ID: %s", currentID)
 
-        // return a json response to the client with the current session ID and success status
-        return e.JSON(http.StatusOK, map[string]any{
-            "status":  "success",
-            "pbid":    currentID, // Vue will look for 'pbid'
-            "message": "Connected to PocketBase",
-        })
+			}
 
-      // bind CORS middleware to allow requests from the frontend running on localhost:5173 with credentials (cookies) included
-    }).Bind(apis.CORS(apis.CORSConfig{
-        // Allow requests from the frontend development server
-        AllowOrigins:     []string{"http://localhost:5173"},
-        AllowCredentials: true,
-    }))
+			// ensure that the user record exists through a helper function
+			if err := ensureUserExists(app, currentID); err != nil {
+				log.Printf("DB Error: %v", err)
 
+			}
 
-    se.Router.POST("/api/submit-diagram", func(e *core.RequestEvent) error {
-        
-        // check for the client_id cookie to identify the user session
-        cookie , err := e.Request.Cookie("client_id")
+			// return a json response to the client with the current session ID and success status
+			return e.JSON(http.StatusOK, map[string]any{
+				"status":  "success",
+				"pbid":    currentID, // Vue will look for 'pbid'
+				"message": "Connected to PocketBase",
+			})
 
-        // if cookie is not found , log the error
-        if err != nil {
-            log.Printf("No client_id cookie found: %v", err)
+			// bind CORS middleware to allow requests from the frontend running on localhost:5173 with credentials (cookies) included
+		}).Bind(apis.CORS(apis.CORSConfig{
+			// Allow requests from the frontend development server
+			AllowOrigins:     []string{"http://localhost:5173"},
+			AllowCredentials: true,
+		}))
 
-        }
+		// ========================================================================================================================== //
 
-        // if cookie is found , extract the session ID from cookie value
-        sessionId := cookie.Value
+		// -====================================== define endpoint to handle diagram submission from frontend ================================== -
 
+		se.Router.POST("/api/submit-diagram", func(e *core.RequestEvent) error {
 
-        // extract the user prompt 
-        prompt := e.Request.FormValue("prompt")
-        // extract the uploading file from multipart form 
-        _, file, err := e.Request.FormFile("diagram")
-        // extract the diagram type from multipart form
-        diagramType := e.Request.FormValue("diagramType")
-        // extract the diagram code from multipart form
-        diagramCode := e.Request.FormValue("diagramCode")
+			// check for the client_id cookie to identify the user session
+			cookie, err := e.Request.Cookie("client_id")
 
+			// if cookie is not found , log the error
+			if err != nil {
+				log.Printf("No client_id cookie found: %v", err)
 
-        // if there's an error reading the file , log the error
-        if err!= nil {
-            log.Printf("Error reading file from request: %v", err)
-            return e.BadRequestError("Failed to read file from request", err)
-         }
-        
+			}
 
-        
-       // launch the function record to database
-       if err := insertDiagram(app, prompt, diagramType, sessionId, file, diagramCode); err != nil {
+			// if cookie is found , extract the session ID from cookie value
+			sessionId := cookie.Value
 
-        // if error , log the error and return internal server error to client
-        log.Printf("Error inserting diagram of type %s: %v", diagramType, err)
-        return e.InternalServerError("Failed to save diagram", err)
-       }
+			// extract the user prompt
+			prompt := e.Request.FormValue("prompt")
+			// extract the uploading file from multipart form
+			_, file, err := e.Request.FormFile("diagram")
+			// extract the diagram type from multipart form
+			diagramType := e.Request.FormValue("diagramType")
+			// extract the diagram code from multipart form
+			diagramCode := e.Request.FormValue("diagramCode")
 
+			// if there's an error reading the file , log the error
+			if err != nil {
+				log.Printf("Error reading file from request: %v", err)
+				return e.BadRequestError("Failed to read file from request", err)
+			}
 
-       
+			// launch the function record to database
+			if err := insertDiagram(app, prompt, diagramType, sessionId, file, diagramCode); err != nil {
 
-       // if successful , return a json response to client
-       return e.JSON(http.StatusOK, map[string]any{
-        "status": "success",
-        "message": "Diagram saved successfully",
-       })
+				// if error , log the error and return internal server error to client
+				log.Printf("Error inserting diagram of type %s: %v", diagramType, err)
+				return e.InternalServerError("Failed to save diagram", err)
+			}
 
-       // bind cors middleware to allow requests from frontend
-    }).Bind(apis.CORS(apis.CORSConfig{
-        AllowOrigins: []string{"http://localhost:5173"},
-        AllowCredentials: true,
-    }))
+			// if successful , return a json response to client
+			return e.JSON(http.StatusOK, map[string]any{
+				"status":  "success",
+				"message": "Diagram saved successfully",
+			})
 
+			// bind cors middleware to allow requests from frontend
+		}).Bind(apis.CORS(apis.CORSConfig{
+			AllowOrigins:     []string{"http://localhost:5173"},
+			AllowCredentials: true,
+		}))
 
+		// ========================================================================================================================== //
 
-    se.Router.GET("/api/fetch-diagrams", func(e *core.RequestEvent) error {
+		// -====================================== define endpoint to fetch diagrams for a user session ================================== -
 
-        // check for client_id cookie to identify user session
-        cookie , err := e.Request.Cookie("client_id")
+		se.Router.GET("/api/fetch-diagrams", func(e *core.RequestEvent) error {
 
-        if err != nil {
-            log.Printf("No client_id cookie found: %v", err)
-            return e.BadRequestError("No client_id cookie found", err)
-        }
+			// check for client_id cookie to identify user session
+			cookie, err := e.Request.Cookie("client_id")
 
-        sessionId := cookie.Value
+			if err != nil {
+				log.Printf("No client_id cookie found: %v", err)
+				return e.BadRequestError("No client_id cookie found", err)
+			}
 
+			sessionId := cookie.Value
 
-        record , err := fetchDiagramsBySessionId(app, sessionId)
+			record, err := fetchDiagramsBySessionId(app, sessionId)
 
-        if err != nil {
-            log.Printf("Error fetching diagrams: %v", err)
-            return e.InternalServerError("Failed to fetch diagrams", err)
-        }
+			if err != nil {
+				log.Printf("Error fetching diagrams: %v", err)
+				return e.InternalServerError("Failed to fetch diagrams", err)
+			}
 
-        return e.JSON(http.StatusOK, map[string]any{
-            "status": "success",
-            "diagrams": record,
-        })
+			return e.JSON(http.StatusOK, map[string]any{
+				"status":   "success",
+				"diagrams": record,
+			})
 
+		}).Bind(apis.CORS(apis.CORSConfig{
+			AllowOrigins:     []string{"http://localhost:5173"},
+			AllowCredentials: true,
+		}))
 
+		// ========================================================================================================================== //
 
-    }).Bind(apis.CORS(apis.CORSConfig{
-        AllowOrigins: []string{"http://localhost:5173"},
-        AllowCredentials: true,
-    }))
+		se.Router.POST("/api/delete-diagram", func(e *core.RequestEvent) error {
 
-    // after setting up route and middleware , start the PocketBase server and log any errors that occur during startup
-    return se.Next()
-})
+			// get diagramId from the JSON body
+			diagramId := e.Request.FormValue("diagramId")
 
+			if diagramId == "" {
+				return e.BadRequestError("No diagramId provided", nil)
+			}
 
+			log.Printf("Delete handler reached for ID: %s", diagramId)
 
+			if err := removeRecentDiagram(app, diagramId); err != nil {
+				log.Printf("Error deleting diagram with ID %s: %v", diagramId, err)
+				return e.InternalServerError("Failed to delete diagram", err)
+			}
 
+			log.Printf("Diagram %s deleted successfully", diagramId)
+			return e.JSON(http.StatusOK, map[string]any{
+				"status":  "success",
+				"message": "Diagram deleted successfully",
+			})
 
-        // if the pocketbase server fails to start, log the error and exit the application
-            if err := app.Start(); err != nil {
-                log.Fatal(err)
-            }
-        }
+		}).Bind(apis.CORS(apis.CORSConfig{
+			AllowOrigins:     []string{"http://localhost:5173"},
+			AllowCredentials: true,
+		}))
+
+		// after setting up route and middleware , start the PocketBase server and log any errors that occur during startup
+		return se.Next()
+	})
+
+	// if the pocketbase server fails to start, log the error and exit the application
+	if err := app.Start(); err != nil {
+		log.Fatal(err)
+	}
+}

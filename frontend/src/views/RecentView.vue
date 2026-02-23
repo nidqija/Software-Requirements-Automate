@@ -15,6 +15,9 @@ const api = axios.create({
 });
 
 
+
+
+
 const formatDate = (dateString) => {
 
   const options = { 
@@ -85,6 +88,21 @@ const downloadImage = async (imageUrl , diagramType , extension = 'svg') =>{
    }
 }
 
+const deleteDiagram = async (diagramId) => {
+  try {
+    const form = new FormData();
+    form.append('diagramId', diagramId);
+
+    await api.post('/delete-diagram', form);
+
+    recentDiagrams.value = recentDiagrams.value.filter(d => d.id !== diagramId);
+    alert('Diagram deleted successfully!');
+  } catch (err) {
+    console.error('Delete failed:', err);
+    alert('Failed to delete diagram. Please try again.');
+  }
+}
+
 
 
 
@@ -114,6 +132,7 @@ const downloadImage = async (imageUrl , diagramType , extension = 'svg') =>{
        </div>
 
        <div class="content-grid" v-else>
+      
          <div class="card" v-for="diagram in recentDiagrams" :key="diagram.id">
           <div>
            <p style="padding: 10px; text-align: start;">{{ formatDate(diagram.created) }}</p>
@@ -127,6 +146,8 @@ const downloadImage = async (imageUrl , diagramType , extension = 'svg') =>{
               <li><a class="dropdown-item" href="#" @click="copyToClipboard(diagram.diagram_code)">Copy diagram code</a></li>
               <li><a class="dropdown-item" href="#" @click="copyToClipboard(diagram.user_prompt)">Copy user prompt</a></li>
               <li><a class="dropdown-item" href="#" @click="downloadImage(`http://localhost:8090/api/files/srauto_diagrams/${diagram.id}/${diagram.diagram_png}`, diagram.diagram_type)">Download Diagram Image</a></li>
+              <li><a class="dropdown-item" href="#" @click = "deleteDiagram(diagram.id)" >Delete Diagram</a></li>
+
           </ul>
           </div>
            <img 
