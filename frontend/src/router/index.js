@@ -36,7 +36,7 @@ const routes = [
         component: FlowChartView,
     } ,
     {
-        path: '/edit-diagram',
+        path: '/fetch-diagram-by-id/:id',
         name: 'EditDiagram',
         component: EditDiagramView,
     }

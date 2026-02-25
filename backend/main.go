@@ -153,6 +153,50 @@ func fetchDiagramsBySessionId(app *pocketbase.PocketBase, sessionId string) ([]*
 
 }
 
+
+// =================================================================================================================== //
+
+// ========================== fetch a specific diagram record by its diagram ID ============================== //
+
+func fetchDiagramById(app *pocketbase.PocketBase, diagramId string) (*core.Record, error) {
+
+
+	// find the collection defined in the pocketbase admin UI
+	collection , err := app.FindCollectionByNameOrId("srauto_diagrams")
+
+	// if collection not found , log the error and return
+	if err!= nil {
+		log.Printf("Error finding collection: %v", err)
+		return nil, err
+		
+	} 
+
+	  // query the collection for records where id field matches the provided diagramID
+		records := []*core.Record{}
+
+		// the query uses andwhere to filter records by diagram ID and orders
+
+		err = app.RecordQuery(collection).
+			AndWhere(dbx.HashExp{"id": diagramId}).
+			Limit(1).
+			All(&records)
+
+
+		// if error , log the error and return it
+		if err != nil {
+			log.Printf("Error fetching records: %v" , err)
+			return nil , err
+		}
+
+
+		log.Printf("Fetched diagram for ID: %s", diagramId)
+		return records[0] , nil
+
+	}
+		
+
+
+
 // =================================================================================================================== //
 
 // =============== helper to ensure we don't create duplicates if user already has a cookie and record ============= //
@@ -341,6 +385,40 @@ func main() {
 		}).Bind(apis.CORS(apis.CORSConfig{
 			AllowOrigins:     []string{"http://localhost:5173"},
 			AllowCredentials: true,
+		}))
+
+// ========================================================================================================================== //
+
+// -====================================== define endpoint to fetch a specific diagram by its ID ================================== -
+
+
+            se.Router.GET("/api/fetch-diagram-by-id" , func(e *core.RequestEvent) error {
+
+
+			diagramId := e.Request.URL.Query().Get("diagramId")
+
+			if diagramId == "" {
+				return e.BadRequestError("No diagramId provided", nil)
+			}
+
+			record , err := fetchDiagramById(app , diagramId)
+
+			if err != nil {
+				log.Printf("Error fetching diagram by ID: %v", err)
+				return e.InternalServerError("Failed to fetch diagram", err)
+			}
+
+			return e.JSON(http.StatusOK, map[string]any{
+				"status": "success",
+				"diagram": record,
+			})
+
+
+		}).Bind(apis.CORS(apis.CORSConfig{
+			AllowOrigins:     []string{"http://localhost:5173"}, // Explicit, no wildcard
+    AllowCredentials: true,
+    AllowMethods:     []string{"GET", "POST", "PUT", "DELETE", "OPTIONS"},
+    AllowHeaders:     []string{"*"},
 		}))
 
 		// ========================================================================================================================== //
