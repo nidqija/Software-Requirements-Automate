@@ -89,6 +89,33 @@ func insertDiagram(app *pocketbase.PocketBase, prompt string, diagramType string
 
 // =================================================================================================================== //
 
+
+// ===================== update a diagram record's code by its ID in srauto_diagrams collection ====================  //
+
+func updateDiagram(app *pocketbase.PocketBase, diagramId string , newDiagramCode string) error {
+	record , err := app.FindRecordById("srauto_diagrams", diagramId)
+
+	if err != nil {
+		log.Printf("Error finding diagram with ID %s: %v", diagramId, err)
+		return err
+	}
+
+	record.Set("diagram_code", newDiagramCode)
+
+	if err := app.Save(record); err != nil {
+		log.Printf("Error updating diagram with ID %s: %v", diagramId, err)
+		return err	
+	}
+
+	log.Printf("Diagram with ID %s updated successfully", diagramId)
+	return nil
+
+
+}
+
+// =================================================================================================================== //
+
+
 // ===================== delete a diagram record by its ID from srauto_diagrams collection ====================  //
 
 func removeRecentDiagram(app *pocketbase.PocketBase, diagramId string) error {
@@ -355,6 +382,36 @@ func main() {
 		}))
 
 		// ========================================================================================================================== //
+
+
+// -====================================== define endpoint to edit diagram code update from frontend ==================================
+
+		se.Router.POST("/api/update-diagram", func(e *core.RequestEvent) error {
+
+	        diagramId := e.Request.URL.Query().Get("diagramId")
+			newDiagramCode := e.Request.FormValue("diagramCode")
+
+			if diagramId == "" || newDiagramCode == "" {
+				return e.BadRequestError("Missing diagramId or diagramCode", nil)
+			}
+
+			if err := updateDiagram(app, diagramId, newDiagramCode); err != nil {
+				log.Printf("Error updating diagram with ID %s: %v", diagramId, err)
+				return e.InternalServerError("Failed to update diagram", err)
+			}
+
+			return e.JSON(http.StatusOK, map[string]any{
+				"status":  "success",
+				"message": "Diagram updated successfully",
+			})
+
+		}).Bind(apis.CORS(apis.CORSConfig{
+			AllowOrigins:     []string{"http://localhost:5173"},
+			AllowCredentials: true,
+		}))
+
+// ========================================================================================================================== //
+
 
 		// -====================================== define endpoint to fetch diagrams for a user session ================================== -
 

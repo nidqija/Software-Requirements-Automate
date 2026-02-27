@@ -39,7 +39,8 @@ const routes = [
         path: '/fetch-diagram-by-id/:id',
         name: 'EditDiagram',
         component: EditDiagramView,
-    }
+    } , 
+    
 ]
 
 const router = createRouter({
