@@ -25,12 +25,11 @@ SR Automate is an AI-driven tool designed to bridge the gap between abstract sof
 
 ```text
 SR_Automate/
-├── backend/             # FastAPI Server & AI Logic
-│   ├── app.py           # Main API Entry
-│   └── clean.py         # Bytecode cleanup script
+├── backend/             # Go Server & AI Logic
+│   └──main.go           # Main API Entry
+
 ├── frontend/            # Vue.js Web App
-├── .venv/               # Python Virtual Environment
-└── package.json         # Root orchestration
+│   └── package.json     # Root orchestration
 
 ```
 
