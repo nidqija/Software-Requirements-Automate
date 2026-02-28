@@ -2,7 +2,7 @@
 
 # SR Automate 🚀
 
-**Human Prompt → Sequence Diagram**
+**Human Prompt → Sequence Diagram , Class Diagram , Flowchart**
 
 SR Automate is an AI-driven tool designed to bridge the gap between abstract software requirements and technical documentation. By leveraging LLMs, it transforms natural language prompts into structured, renderable sequence diagrams.
 
