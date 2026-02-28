@@ -89,11 +89,10 @@ func insertDiagram(app *pocketbase.PocketBase, prompt string, diagramType string
 
 // =================================================================================================================== //
 
-
 // ===================== update a diagram record's code by its ID in srauto_diagrams collection ====================  //
 
-func updateDiagram(app *pocketbase.PocketBase, diagramId string , newDiagramCode string) error {
-	record , err := app.FindRecordById("srauto_diagrams", diagramId)
+func updateDiagram(app *pocketbase.PocketBase, diagramId string, newDiagramCode string) error {
+	record, err := app.FindRecordById("srauto_diagrams", diagramId)
 
 	if err != nil {
 		log.Printf("Error finding diagram with ID %s: %v", diagramId, err)
@@ -104,17 +103,15 @@ func updateDiagram(app *pocketbase.PocketBase, diagramId string , newDiagramCode
 
 	if err := app.Save(record); err != nil {
 		log.Printf("Error updating diagram with ID %s: %v", diagramId, err)
-		return err	
+		return err
 	}
 
 	log.Printf("Diagram with ID %s updated successfully", diagramId)
 	return nil
 
-
 }
 
 // =================================================================================================================== //
-
 
 // ===================== delete a diagram record by its ID from srauto_diagrams collection ====================  //
 
@@ -180,49 +177,42 @@ func fetchDiagramsBySessionId(app *pocketbase.PocketBase, sessionId string) ([]*
 
 }
 
-
 // =================================================================================================================== //
 
 // ========================== fetch a specific diagram record by its diagram ID ============================== //
 
 func fetchDiagramById(app *pocketbase.PocketBase, diagramId string) (*core.Record, error) {
 
-
 	// find the collection defined in the pocketbase admin UI
-	collection , err := app.FindCollectionByNameOrId("srauto_diagrams")
+	collection, err := app.FindCollectionByNameOrId("srauto_diagrams")
 
 	// if collection not found , log the error and return
-	if err!= nil {
+	if err != nil {
 		log.Printf("Error finding collection: %v", err)
 		return nil, err
-		
-	} 
-
-	  // query the collection for records where id field matches the provided diagramID
-		records := []*core.Record{}
-
-		// the query uses andwhere to filter records by diagram ID and orders
-
-		err = app.RecordQuery(collection).
-			AndWhere(dbx.HashExp{"id": diagramId}).
-			Limit(1).
-			All(&records)
-
-
-		// if error , log the error and return it
-		if err != nil {
-			log.Printf("Error fetching records: %v" , err)
-			return nil , err
-		}
-
-
-		log.Printf("Fetched diagram for ID: %s", diagramId)
-		return records[0] , nil
 
 	}
-		
 
+	// query the collection for records where id field matches the provided diagramID
+	records := []*core.Record{}
 
+	// the query uses andwhere to filter records by diagram ID and orders
+
+	err = app.RecordQuery(collection).
+		AndWhere(dbx.HashExp{"id": diagramId}).
+		Limit(1).
+		All(&records)
+
+	// if error , log the error and return it
+	if err != nil {
+		log.Printf("Error fetching records: %v", err)
+		return nil, err
+	}
+
+	log.Printf("Fetched diagram for ID: %s", diagramId)
+	return records[0], nil
+
+}
 
 // =================================================================================================================== //
 
@@ -264,6 +254,14 @@ func main() {
 
 	// bind a function to the onserve event , which runs every time the server starts and is ready to handle requests
 	app.OnServe().BindFunc(func(se *core.ServeEvent) error {
+
+		// Apply a single global CORS middleware for all routes
+		se.Router.Bind(apis.CORS(apis.CORSConfig{
+			AllowOrigins:     []string{"http://localhost:5173"},
+			AllowCredentials: true,
+			AllowMethods:     []string{"GET", "POST", "PUT", "DELETE", "OPTIONS"},
+			AllowHeaders:     []string{"Content-Type", "Authorization"},
+		}))
 
 		// define a new GET endpoint at /api/test that will handle incoming requests from the frontend
 		se.Router.GET("/api/test", func(e *core.RequestEvent) error {
@@ -321,12 +319,7 @@ func main() {
 				"message": "Connected to PocketBase",
 			})
 
-			// bind CORS middleware to allow requests from the frontend running on localhost:5173 with credentials (cookies) included
-		}).Bind(apis.CORS(apis.CORSConfig{
-			// Allow requests from the frontend development server
-			AllowOrigins:     []string{"http://localhost:5173"},
-			AllowCredentials: true,
-		}))
+		})
 
 		// ========================================================================================================================== //
 
@@ -375,43 +368,37 @@ func main() {
 				"message": "Diagram saved successfully",
 			})
 
-			// bind cors middleware to allow requests from frontend
-		}).Bind(apis.CORS(apis.CORSConfig{
-			AllowOrigins:     []string{"http://localhost:5173"},
-			AllowCredentials: true,
-		}))
+		})
 
 		// ========================================================================================================================== //
 
-
-// -====================================== define endpoint to edit diagram code update from frontend ==================================
+		// -====================================== define endpoint to edit diagram code update from frontend ==================================
 
 		se.Router.POST("/api/update-diagram", func(e *core.RequestEvent) error {
+			// Define a struct to capture the JSON body from Vue
+			data := struct {
+				DiagramId   string `json:"diagramId"`
+				DiagramCode string `json:"diagramCode"`
+			}{}
 
-	        diagramId := e.Request.URL.Query().Get("diagramId")
-			newDiagramCode := e.Request.FormValue("diagramCode")
+			// Bind the JSON body to the struct
+			if err := e.BindBody(&data); err != nil {
+				return e.BadRequestError("Invalid JSON format", err)
+			}
 
-			if diagramId == "" || newDiagramCode == "" {
+			if data.DiagramId == "" || data.DiagramCode == "" {
 				return e.BadRequestError("Missing diagramId or diagramCode", nil)
 			}
 
-			if err := updateDiagram(app, diagramId, newDiagramCode); err != nil {
-				log.Printf("Error updating diagram with ID %s: %v", diagramId, err)
-				return e.InternalServerError("Failed to update diagram", err)
+			if err := updateDiagram(app, data.DiagramId, data.DiagramCode); err != nil {
+				return e.InternalServerError("Update failed", err)
 			}
 
-			return e.JSON(http.StatusOK, map[string]any{
-				"status":  "success",
-				"message": "Diagram updated successfully",
-			})
+			return e.JSON(http.StatusOK, map[string]any{"status": "success"})
 
-		}).Bind(apis.CORS(apis.CORSConfig{
-			AllowOrigins:     []string{"http://localhost:5173"},
-			AllowCredentials: true,
-		}))
+		})
 
-// ========================================================================================================================== //
-
+		// ========================================================================================================================== //
 
 		// -====================================== define endpoint to fetch diagrams for a user session ================================== -
 
@@ -439,18 +426,13 @@ func main() {
 				"diagrams": record,
 			})
 
-		}).Bind(apis.CORS(apis.CORSConfig{
-			AllowOrigins:     []string{"http://localhost:5173"},
-			AllowCredentials: true,
-		}))
+		})
 
-// ========================================================================================================================== //
+		// ========================================================================================================================== //
 
-// -====================================== define endpoint to fetch a specific diagram by its ID ================================== -
+		// -====================================== define endpoint to fetch a specific diagram by its ID ================================== -
 
-
-            se.Router.GET("/api/fetch-diagram-by-id" , func(e *core.RequestEvent) error {
-
+		se.Router.GET("/api/fetch-diagram-by-id", func(e *core.RequestEvent) error {
 
 			diagramId := e.Request.URL.Query().Get("diagramId")
 
@@ -458,7 +440,7 @@ func main() {
 				return e.BadRequestError("No diagramId provided", nil)
 			}
 
-			record , err := fetchDiagramById(app , diagramId)
+			record, err := fetchDiagramById(app, diagramId)
 
 			if err != nil {
 				log.Printf("Error fetching diagram by ID: %v", err)
@@ -466,17 +448,11 @@ func main() {
 			}
 
 			return e.JSON(http.StatusOK, map[string]any{
-				"status": "success",
+				"status":  "success",
 				"diagram": record,
 			})
 
-
-		}).Bind(apis.CORS(apis.CORSConfig{
-			AllowOrigins:     []string{"http://localhost:5173"}, // Explicit, no wildcard
-    AllowCredentials: true,
-    AllowMethods:     []string{"GET", "POST", "PUT", "DELETE", "OPTIONS"},
-    AllowHeaders:     []string{"*"},
-		}))
+		})
 
 		// ========================================================================================================================== //
 
@@ -502,10 +478,7 @@ func main() {
 				"message": "Diagram deleted successfully",
 			})
 
-		}).Bind(apis.CORS(apis.CORSConfig{
-			AllowOrigins:     []string{"http://localhost:5173"},
-			AllowCredentials: true,
-		}))
+		})
 
 		// after setting up route and middleware , start the PocketBase server and log any errors that occur during startup
 		return se.Next()

@@ -19,6 +19,8 @@
   const mermaidSvg = ref(''); 
   const isSaving = ref(false);
 
+
+  
   const api = axios.create({
     baseURL: 'http://localhost:8090/api',
     withCredentials: true, 
@@ -73,12 +75,18 @@
   const submitChanges = async () => {
       isSaving.value = true;
       try {
-        await api.post('/update-diagram', {
+        const response = await api.post('/update-diagram', {
               diagramId: diagramId,
               diagramCode: diagramDetails.value.diagram_code,
           });
 
-          alert('Diagram updated successfully!');
+          if (response.data && response.data.status === "success") {
+            alert('Diagram updated successfully!');
+          } else {
+            alert('Failed to update diagram.');
+          }
+
+
       } catch (err) {
           console.error('Failed to update diagram:', err);
           alert('Failed to update diagram. Please try again.');
@@ -108,13 +116,23 @@
           <p class="mb-5">Diagram Code:</p>
           <div class="row">
     <div class="col-sm-6">
+      <form action="post" method="post">
       <div class="card">
         <div class="mb-3">
             <textarea class="form-control" style="height: 400px;" id="exampleFormControlTextarea1" rows="3" v-model="diagramDetails.diagram_code"></textarea>
           </div>
-          <a class="btn btn-primary" href="" @click="submitChanges" :disabled="isSaving">{{ isSaving ? 'Saving...' : 'Submit Changes' }}</a>
-        
+          <button 
+  class="btn btn-primary" 
+  type="button" 
+  @click="submitChanges" 
+  :disabled="isSaving"
+>
+
+  {{ isSaving ? 'Saving...' : 'Submit Changes' }}
+</button>
+      
       </div> 
+        </form>
     </div>
     <div class="col-sm-6">
       <div class="card">
