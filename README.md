@@ -69,6 +69,6 @@ SR_Automate/
 --- 
 
 ## 📚 Documentation
-- **Software Requirements**: https://drive.google.com/file/d/1Y_cg4NbQTGsk2K6KfHOCDNsOMpQ-u7vS/view?usp=sharing
+- **Software Documentation**: https://drive.google.com/file/d/1Y_cg4NbQTGsk2K6KfHOCDNsOMpQ-u7vS/view?usp=sharing
 
 ---
